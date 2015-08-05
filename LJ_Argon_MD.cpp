@@ -6,6 +6,7 @@
 #include "SDKmisc.h"
 #include "DXUTShapes.h"
 #include "DXUTcamera.h"
+#include <array>
 
 //! A global variable.
 /*!
@@ -13,16 +14,16 @@
 */
 D3D10_BUFFER_DESC g_bd;
 
-ID3DX10Mesh*                g_pMesh = NULL;
-ID3D10Buffer*               g_pVertexBuffer = NULL;
-ID3D10Buffer*               g_pIndexBuffer = NULL;
-ID3D10InputLayout*          g_pLayout = NULL;
-ID3D10Effect*               g_pEffect = NULL;
-ID3D10EffectTechnique*      g_pRender = NULL;
-ID3D10EffectMatrixVariable* g_pWorldVariable = NULL;
-ID3D10EffectMatrixVariable* g_pViewVariable = NULL;
-ID3D10EffectMatrixVariable* g_pProjectionVariable = NULL;
-ID3D10EffectVectorVariable* g_pColorVariable = NULL;
+ID3DX10Mesh*                g_pMesh = nullptr;
+ID3D10Buffer*               g_pVertexBuffer = nullptr;
+ID3D10Buffer*               g_pIndexBuffer = nullptr;
+ID3D10InputLayout*          g_pLayout = nullptr;
+ID3D10Effect*               g_pEffect = nullptr;
+ID3D10EffectTechnique*      g_pRender = nullptr;
+ID3D10EffectMatrixVariable* g_pWorldVariable = nullptr;
+ID3D10EffectMatrixVariable* g_pViewVariable = nullptr;
+ID3D10EffectMatrixVariable* g_pProjectionVariable = nullptr;
+ID3D10EffectVectorVariable* g_pColorVariable = nullptr;
 D3DXMATRIX                  g_View;
 D3DXMATRIX                  g_Projection;
 D3DXVECTOR4 g_Colors[2] = 
@@ -32,13 +33,15 @@ D3DXVECTOR4 g_Colors[2] =
 };
 CModelViewerCamera          g_Camera;
 
+static auto const NUMVERTEXBUFFER = 8;
+static auto const NUMINDEXBUFFER = 16;
+
 //--------------------------------------------------------------------------------------
 // Structures
 //--------------------------------------------------------------------------------------
 struct SimpleVertex
 {
     D3DXVECTOR3 Pos;
-    D3DXVECTOR2 Tex;
 };
 
 //--------------------------------------------------------------------------------------
@@ -52,33 +55,33 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
     pd3dDevice->ClearDepthStencilView(DXUTGetD3D10DepthStencilView(), D3D10_CLEAR_DEPTH, 1.0, 0);
 
     // Update variables
-    g_pWorldVariable->SetMatrix((float*)&(*g_Camera.GetWorldMatrix()));
-    g_pViewVariable->SetMatrix((float*)&(*g_Camera.GetViewMatrix()));
-    g_pProjectionVariable->SetMatrix((float*)&(*g_Camera.GetProjMatrix()));
+    g_pWorldVariable->SetMatrix(reinterpret_cast<float *>(const_cast<D3DXMATRIX *>(&(*g_Camera.GetWorldMatrix()))));
+    g_pViewVariable->SetMatrix(reinterpret_cast<float *>(const_cast<D3DXMATRIX *>(&(*g_Camera.GetViewMatrix()))));
+    g_pProjectionVariable->SetMatrix(reinterpret_cast<float *>(const_cast<D3DXMATRIX *>(&(*g_Camera.GetProjMatrix()))));
 
-    g_pColorVariable->SetFloatVector((float*)&g_Colors[0]);
+    g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[0]));
 
     D3D10_TECHNIQUE_DESC techDesc;
     g_pRender->GetDesc(&techDesc);
 
     UINT NumSubsets;
-    g_pMesh->GetAttributeTable(NULL, &NumSubsets);
+    g_pMesh->GetAttributeTable(nullptr, &NumSubsets);
 
     pd3dDevice->IASetInputLayout(g_pLayout);
 
-    for (UINT p = 0; p<techDesc.Passes; p++)
+    for (auto p = 0U; p < techDesc.Passes; p++)
     {
         g_pRender->GetPassByIndex(p)->Apply(0);
-        for (UINT s = 0; s<NumSubsets; s++)
+        for (auto s = 0U; s < NumSubsets; s++)
         {
             g_pMesh->DrawSubset(s);
         }
     }
 
-    g_pColorVariable->SetFloatVector((float*)&g_Colors[1]);
+    g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[1]));
     
     // Set vertex buffer
-    UINT stride = sizeof(SimpleVertex);
+    auto const stride = sizeof(SimpleVertex);
     UINT offset = 0;
     pd3dDevice->IASetVertexBuffers(0, 1, &g_pVertexBuffer, &stride, &offset);
 
@@ -88,10 +91,10 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
     // Set primitive topology
     pd3dDevice->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_LINESTRIP);
         
-    for (UINT p = 0; p<techDesc.Passes; p++)
+    for (auto p = 0U; p < techDesc.Passes; p++)
     {
         g_pRender->GetPassByIndex(p)->Apply(0);
-        pd3dDevice->DrawIndexed(9, 0, 0);
+        pd3dDevice->DrawIndexed(NUMINDEXBUFFER, 0, 0);
     }
 }
 
@@ -126,7 +129,7 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
     #if defined( DEBUG ) || defined( _DEBUG )
     dwShaderFlags |= D3D10_SHADER_DEBUG;
     #endif
-    V_RETURN( D3DX10CreateEffectFromFile( str, NULL, NULL, "fx_4_0", dwShaderFlags, 0, pd3dDevice, NULL, NULL, &g_pEffect, NULL, NULL ) );
+    V_RETURN( D3DX10CreateEffectFromFile( str, nullptr, nullptr, "fx_4_0", dwShaderFlags, 0, pd3dDevice, nullptr, nullptr, &g_pEffect, nullptr, nullptr ) );
 
     // Obtain the technique
     g_pRender = g_pEffect->GetTechniqueByName( "Render" );
@@ -149,79 +152,50 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
     DXUTCreateSphere( pd3dDevice, 1.0f, 16, 16, &g_pMesh );
 
     // Create vertex buffer
-    SimpleVertex vertices[] =
+    std::array<SimpleVertex, NUMVERTEXBUFFER> vertices =
     {
-        { D3DXVECTOR3(-1.0f, 1.0f, -1.0f), D3DXVECTOR2(0.0f, 0.0f) },
-        { D3DXVECTOR3(1.0f, 1.0f, -1.0f), D3DXVECTOR2(1.0f, 0.0f) },
-        { D3DXVECTOR3(1.0f, 1.0f, 1.0f), D3DXVECTOR2(1.0f, 1.0f) },
-        { D3DXVECTOR3(-1.0f, 1.0f, 1.0f), D3DXVECTOR2(0.0f, 1.0f) },
+        D3DXVECTOR3(-1.0f, 1.0f, -1.0f),
+        D3DXVECTOR3(1.0f, 1.0f, -1.0f),
+        D3DXVECTOR3(1.0f, 1.0f, 1.0f), 
+        D3DXVECTOR3(-1.0f, 1.0f, 1.0f),
 
-        { D3DXVECTOR3(-1.0f, -1.0f, -1.0f), D3DXVECTOR2(0.0f, 0.0f) },
-        { D3DXVECTOR3(1.0f, -1.0f, -1.0f), D3DXVECTOR2(1.0f, 0.0f) },
-        { D3DXVECTOR3(1.0f, -1.0f, 1.0f), D3DXVECTOR2(1.0f, 1.0f) },
-        { D3DXVECTOR3(-1.0f, -1.0f, 1.0f), D3DXVECTOR2(0.0f, 1.0f) },
-
-        { D3DXVECTOR3(-1.0f, -1.0f, 1.0f), D3DXVECTOR2(0.0f, 0.0f) },
-        { D3DXVECTOR3(-1.0f, -1.0f, -1.0f), D3DXVECTOR2(1.0f, 0.0f) },
-        { D3DXVECTOR3(-1.0f, 1.0f, -1.0f), D3DXVECTOR2(1.0f, 1.0f) },
-        { D3DXVECTOR3(-1.0f, 1.0f, 1.0f), D3DXVECTOR2(0.0f, 1.0f) },
-
-        { D3DXVECTOR3(1.0f, -1.0f, 1.0f), D3DXVECTOR2(0.0f, 0.0f) },
-        { D3DXVECTOR3(1.0f, -1.0f, -1.0f), D3DXVECTOR2(1.0f, 0.0f) },
-        { D3DXVECTOR3(1.0f, 1.0f, -1.0f), D3DXVECTOR2(1.0f, 1.0f) },
-        { D3DXVECTOR3(1.0f, 1.0f, 1.0f), D3DXVECTOR2(0.0f, 1.0f) },
-
-        { D3DXVECTOR3(-1.0f, -1.0f, -1.0f), D3DXVECTOR2(0.0f, 0.0f) },
-        { D3DXVECTOR3(1.0f, -1.0f, -1.0f), D3DXVECTOR2(1.0f, 0.0f) },
-        { D3DXVECTOR3(1.0f, 1.0f, -1.0f), D3DXVECTOR2(1.0f, 1.0f) },
-        { D3DXVECTOR3(-1.0f, 1.0f, -1.0f), D3DXVECTOR2(0.0f, 1.0f) },
-
-        { D3DXVECTOR3(-1.0f, -1.0f, 1.0f), D3DXVECTOR2(0.0f, 0.0f) },
-        { D3DXVECTOR3(1.0f, -1.0f, 1.0f), D3DXVECTOR2(1.0f, 0.0f) },
-        { D3DXVECTOR3(1.0f, 1.0f, 1.0f), D3DXVECTOR2(1.0f, 1.0f) },
-        { D3DXVECTOR3(-1.0f, 1.0f, 1.0f), D3DXVECTOR2(0.0f, 1.0f) },
+        D3DXVECTOR3(-1.0f, -1.0f, -1.0f), 
+        D3DXVECTOR3(1.0f, -1.0f, -1.0f),
+        D3DXVECTOR3(1.0f, -1.0f, 1.0f),
+        D3DXVECTOR3(-1.0f, -1.0f, 1.0f),
     };
 
     g_bd.Usage = D3D10_USAGE_DEFAULT;
-    g_bd.ByteWidth = sizeof(SimpleVertex) * 24;
+    g_bd.ByteWidth = sizeof(SimpleVertex) * 8;
     g_bd.BindFlags = D3D10_BIND_VERTEX_BUFFER;
     g_bd.CPUAccessFlags = 0;
     g_bd.MiscFlags = 0;
 
     D3D10_SUBRESOURCE_DATA InitData;
-    InitData.pSysMem = vertices;
-    /*V_RETURN(*/pd3dDevice->CreateBuffer(&g_bd, &InitData, &g_pVertexBuffer)/*)*/;
+    InitData.pSysMem = vertices.data();
+    V_RETURN(pd3dDevice->CreateBuffer(&g_bd, &InitData, &g_pVertexBuffer));
 
     // Create index buffer
     // Create vertex buffer
-    DWORD indices[] =
+    std::array<DWORD, NUMINDEXBUFFER> indices =
     {
         0, 1, 2,
         3, 0, 4,
 
-        5, 1, 2//6, 7,
-        //7, 4, 6,
+        5, 1, 2,
+        6, 5, 4,
 
-        //11, 9, 8,
-        //10, 9, 11,
-
-        //14, 12, 13,
-        //15, 12, 14,
-
-        //19, 17, 16,
-        //18, 17, 19,
-
-        //22, 20, 21,
-        //23, 20, 22
+        7, 3, 7,
+        6
     };
 
     g_bd.Usage = D3D10_USAGE_DEFAULT;
-    g_bd.ByteWidth = sizeof(DWORD) * 9;
+    g_bd.ByteWidth = sizeof(DWORD) * NUMINDEXBUFFER;
     g_bd.BindFlags = D3D10_BIND_INDEX_BUFFER;
     g_bd.CPUAccessFlags = 0;
     g_bd.MiscFlags = 0;
-    InitData.pSysMem = indices;
-    /*V_RETURN(*/pd3dDevice->CreateBuffer(&g_bd, &InitData, &g_pIndexBuffer)/*)*/;
+    InitData.pSysMem = indices.data();
+    V_RETURN(pd3dDevice->CreateBuffer(&g_bd, &InitData, &g_pIndexBuffer));
 
     D3DXVECTOR3 vEye(0, 4, -4);
     D3DXVECTOR3 vLook(0, 0, 0);
@@ -230,7 +204,7 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
     D3DXMatrixLookAtLH(&g_View, &vEye, &vLook, &Up);
 
     // Update Variables that never change
-    g_pViewVariable->SetMatrix((float*)&g_View);
+    g_pViewVariable->SetMatrix(reinterpret_cast<float *>(&g_View));
 
     g_Camera.SetViewParams(&vEye, &vLook);
 
@@ -337,7 +311,7 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
     DXUTSetCallbackD3D10SwapChainReleasing( OnD3D10ReleasingSwapChain );
     DXUTSetCallbackD3D10DeviceDestroyed( OnD3D10DestroyDevice );
 
-    DXUTInit( true, true, NULL ); // Parse the command line, show msgboxes on error, no extra command line params
+    DXUTInit( true, true, nullptr ); // Parse the command line, show msgboxes on error, no extra command line params
     DXUTSetCursorSettings( true, true ); // Show the cursor and clip it when in full screen
     DXUTCreateWindow( L"Teapot ArcBall" );
     DXUTCreateDevice( true, 640, 480 );  
