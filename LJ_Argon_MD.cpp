@@ -6,19 +6,42 @@
 #include "SDKmisc.h"
 #include "DXUTShapes.h"
 #include "DXUTcamera.h"
+#include "utility/utility.h"
 #include <array>
+#include <memory>
 
 //! A global variable.
 /*!
     バッファー リソース
 */
-D3D10_BUFFER_DESC g_bd;
+D3D10_BUFFER_DESC bd;
 
 ID3DX10Mesh*                g_pMesh = nullptr;
-ID3D10Buffer*               g_pVertexBuffer = nullptr;
-ID3D10Buffer*               g_pIndexBuffer = nullptr;
-ID3D10InputLayout*          g_pLayout = nullptr;
-ID3D10Effect*               g_pEffect = nullptr;
+
+//! A global variable.
+/*!
+	エフェクト＝シェーダプログラムを読ませるところ
+*/
+std::unique_ptr<ID3D10Effect, utility::Safe_Release<ID3D10Effect>> pEffect;
+
+//! A global variable.
+/*!
+	インデックスバッファ
+*/
+std::unique_ptr<ID3D10Buffer, utility::Safe_Release<ID3D10Buffer>> pIndexBuffer;
+
+//! A global variable.
+/*!
+	入力レイアウト インターフェイス
+*/
+std::unique_ptr<ID3D10InputLayout, utility::Safe_Release<ID3D10InputLayout>> pLayout;
+
+//! A global variable.
+/*!
+	頂点バッファ
+*/
+std::unique_ptr<ID3D10Buffer, utility::Safe_Release<ID3D10Buffer>> pVertexBuffer;
+
 ID3D10EffectTechnique*      g_pRender = nullptr;
 ID3D10EffectMatrixVariable* g_pWorldVariable = nullptr;
 ID3D10EffectMatrixVariable* g_pViewVariable = nullptr;
@@ -50,8 +73,8 @@ struct SimpleVertex
 void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float fElapsedTime, void* pUserContext )
 {
     // Clear render target and the depth stencil 
-    float ClearColor[4] = { 0.176f, 0.196f, 0.667f, 0.0f };
-    pd3dDevice->ClearRenderTargetView(DXUTGetD3D10RenderTargetView(), ClearColor);
+    std::array<float, 4> const ClearColor = { 0.176f, 0.196f, 0.667f, 0.0f };
+    pd3dDevice->ClearRenderTargetView(DXUTGetD3D10RenderTargetView(), ClearColor.data());
     pd3dDevice->ClearDepthStencilView(DXUTGetD3D10DepthStencilView(), D3D10_CLEAR_DEPTH, 1.0, 0);
 
     // Update variables
@@ -67,8 +90,6 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
     UINT NumSubsets;
     g_pMesh->GetAttributeTable(nullptr, &NumSubsets);
 
-    pd3dDevice->IASetInputLayout(g_pLayout);
-
     for (auto p = 0U; p < techDesc.Passes; p++)
     {
         g_pRender->GetPassByIndex(p)->Apply(0);
@@ -82,11 +103,12 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
     
     // Set vertex buffer
     auto const stride = sizeof(SimpleVertex);
-    UINT offset = 0;
-    pd3dDevice->IASetVertexBuffers(0, 1, &g_pVertexBuffer, &stride, &offset);
-
+    auto const offset = 0U;
+	auto const pVertexBuffertmp = pVertexBuffer.get();
+	pd3dDevice->IASetVertexBuffers(0, 1, &pVertexBuffertmp, &stride, &offset);
+	
     // Set index buffer
-    pd3dDevice->IASetIndexBuffer(g_pIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	pd3dDevice->IASetIndexBuffer(pIndexBuffer.get(), DXGI_FORMAT_R32_UINT, 0);
 
     // Set primitive topology
     pd3dDevice->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_LINESTRIP);
@@ -126,33 +148,61 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
     WCHAR str[MAX_PATH];
     V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, L"Normal.fx" ) );
     DWORD dwShaderFlags = D3D10_SHADER_ENABLE_STRICTNESS;
-    #if defined( DEBUG ) || defined( _DEBUG )
+#if defined( DEBUG ) || defined( _DEBUG )
     dwShaderFlags |= D3D10_SHADER_DEBUG;
-    #endif
-    V_RETURN( D3DX10CreateEffectFromFile( str, nullptr, nullptr, "fx_4_0", dwShaderFlags, 0, pd3dDevice, nullptr, nullptr, &g_pEffect, nullptr, nullptr ) );
+#endif
+
+	ID3D10Effect * pEffecttmp;
+	utility::v_return(
+		D3DX10CreateEffectFromFile(
+			str,
+			nullptr,
+			nullptr,
+			"fx_4_0",
+			dwShaderFlags,
+			0,
+			pd3dDevice,
+			nullptr,
+			nullptr,
+			&pEffecttmp,
+			nullptr,
+			nullptr ) );
+	pEffect.reset(pEffecttmp);
 
     // Obtain the technique
-    g_pRender = g_pEffect->GetTechniqueByName( "Render" );
-    // Obtain the variables
-    g_pWorldVariable = g_pEffect->GetVariableByName( "World" )->AsMatrix();
-    g_pViewVariable = g_pEffect->GetVariableByName( "View" )->AsMatrix();
-    g_pProjectionVariable = g_pEffect->GetVariableByName( "Projection" )->AsMatrix();
-    g_pColorVariable = g_pEffect->GetVariableByName( "Color" )->AsVector();
+    g_pRender = pEffect->GetTechniqueByName( "Render" );
+    
+	// Obtain the variables
+    g_pWorldVariable = pEffect->GetVariableByName( "World" )->AsMatrix();
+    g_pViewVariable = pEffect->GetVariableByName( "View" )->AsMatrix();
+    g_pProjectionVariable = pEffect->GetVariableByName( "Projection" )->AsMatrix();
+    g_pColorVariable = pEffect->GetVariableByName( "Color" )->AsVector();
 
     // Create an input layout
-    const D3D10_INPUT_ELEMENT_DESC layout[] =
+    D3D10_INPUT_ELEMENT_DESC const layout[] =
     {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D10_INPUT_PER_VERTEX_DATA, 0 },
         { "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D10_INPUT_PER_VERTEX_DATA, 0 },
     };
-    D3D10_PASS_DESC PassDesc;
+    
+	D3D10_PASS_DESC PassDesc;
     g_pRender->GetPassByIndex( 0 )->GetDesc( &PassDesc );
-    V_RETURN( pd3dDevice->CreateInputLayout( layout, sizeof(layout)/sizeof(layout[0]), 
-                          PassDesc.pIAInputSignature, PassDesc.IAInputSignatureSize, &g_pLayout ) );
+
+	ID3D10InputLayout * pLayouttmp;
+    utility::v_return(
+		pd3dDevice->CreateInputLayout(
+			layout,
+			sizeof(layout) / sizeof(layout[0]), 
+            PassDesc.pIAInputSignature,
+			PassDesc.IAInputSignatureSize, &pLayouttmp ) );
+	pLayout.reset(pLayouttmp);
+
+	pd3dDevice->IASetInputLayout(pLayout.get());
+
     DXUTCreateSphere( pd3dDevice, 1.0f, 16, 16, &g_pMesh );
 
     // Create vertex buffer
-    std::array<SimpleVertex, NUMVERTEXBUFFER> vertices =
+    std::array<SimpleVertex, NUMVERTEXBUFFER> const vertices =
     {
         D3DXVECTOR3(-1.0f, 1.0f, -1.0f),
         D3DXVECTOR3(1.0f, 1.0f, -1.0f),
@@ -165,19 +215,22 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
         D3DXVECTOR3(-1.0f, -1.0f, 1.0f),
     };
 
-    g_bd.Usage = D3D10_USAGE_DEFAULT;
-    g_bd.ByteWidth = sizeof(SimpleVertex) * 8;
-    g_bd.BindFlags = D3D10_BIND_VERTEX_BUFFER;
-    g_bd.CPUAccessFlags = 0;
-    g_bd.MiscFlags = 0;
+    bd.Usage = D3D10_USAGE_DEFAULT;
+	bd.ByteWidth = sizeof(SimpleVertex) * NUMVERTEXBUFFER;
+    bd.BindFlags = D3D10_BIND_VERTEX_BUFFER;
+    bd.CPUAccessFlags = 0;
+    bd.MiscFlags = 0;
 
     D3D10_SUBRESOURCE_DATA InitData;
     InitData.pSysMem = vertices.data();
-    V_RETURN(pd3dDevice->CreateBuffer(&g_bd, &InitData, &g_pVertexBuffer));
+
+	ID3D10Buffer * pVertexBuffertmp;
+    utility::v_return(pd3dDevice->CreateBuffer(&bd, &InitData, &pVertexBuffertmp));
+	pVertexBuffer.reset(pVertexBuffertmp);
 
     // Create index buffer
     // Create vertex buffer
-    std::array<DWORD, NUMINDEXBUFFER> indices =
+    std::array<DWORD, NUMINDEXBUFFER> const indices =
     {
         0, 1, 2,
         3, 0, 4,
@@ -189,14 +242,17 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
         6
     };
 
-    g_bd.Usage = D3D10_USAGE_DEFAULT;
-    g_bd.ByteWidth = sizeof(DWORD) * NUMINDEXBUFFER;
-    g_bd.BindFlags = D3D10_BIND_INDEX_BUFFER;
-    g_bd.CPUAccessFlags = 0;
-    g_bd.MiscFlags = 0;
+    bd.Usage = D3D10_USAGE_DEFAULT;
+    bd.ByteWidth = sizeof(DWORD) * NUMINDEXBUFFER;
+    bd.BindFlags = D3D10_BIND_INDEX_BUFFER;
+    bd.CPUAccessFlags = 0;
+    bd.MiscFlags = 0;
     InitData.pSysMem = indices.data();
-    V_RETURN(pd3dDevice->CreateBuffer(&g_bd, &InitData, &g_pIndexBuffer));
-
+	
+	ID3D10Buffer * pIndexBuffertmp;
+    utility::v_return(pd3dDevice->CreateBuffer(&bd, &InitData, &pIndexBuffertmp));
+	pIndexBuffer.reset(pIndexBuffertmp);
+	
     D3DXVECTOR3 vEye(0, 4, -4);
     D3DXVECTOR3 vLook(0, 0, 0);
 
@@ -243,10 +299,10 @@ void CALLBACK OnD3D10ReleasingSwapChain( void* pUserContext )
 //--------------------------------------------------------------------------------------
 void CALLBACK OnD3D10DestroyDevice( void* pUserContext )
 {
-    SAFE_RELEASE(g_pEffect);
-    SAFE_RELEASE(g_pLayout);
-    SAFE_RELEASE(g_pIndexBuffer);
-    SAFE_RELEASE(g_pVertexBuffer);
+    pEffect.reset();
+	pLayout.reset();
+    pIndexBuffer.reset();
+    pVertexBuffer.reset();
     SAFE_RELEASE(g_pMesh);
 }
 
