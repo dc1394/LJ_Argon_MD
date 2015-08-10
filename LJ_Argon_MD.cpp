@@ -7,8 +7,9 @@
 #include "DXUTShapes.h"
 #include "DXUTcamera.h"
 #include "utility/utility.h"
-#include <array>
-#include <memory>
+#include <array>                // for std::array
+#include <memory>               // for std::unique_ptr
+#include <vector>               // std::vector
 
 //! A global variable.
 /*!
@@ -16,7 +17,11 @@
 */
 D3D10_BUFFER_DESC bd;
 
-ID3DX10Mesh*                g_pMesh = nullptr;
+//! A global variable.
+/*!
+    メッシュへのスマートポインタが格納された可変長配列
+*/
+std::vector<std::unique_ptr<ID3DX10Mesh, utility::Safe_Release<ID3DX10Mesh>>> pmeshvec(2);
 
 //! A global variable.
 /*!
@@ -76,30 +81,37 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
     std::array<float, 4> const ClearColor = { 0.176f, 0.196f, 0.667f, 0.0f };
     pd3dDevice->ClearRenderTargetView(DXUTGetD3D10RenderTargetView(), ClearColor.data());
     pd3dDevice->ClearDepthStencilView(DXUTGetD3D10DepthStencilView(), D3D10_CLEAR_DEPTH, 1.0, 0);
-
+    
     // Update variables
     g_pWorldVariable->SetMatrix(reinterpret_cast<float *>(const_cast<D3DXMATRIX *>(&(*g_Camera.GetWorldMatrix()))));
     g_pViewVariable->SetMatrix(reinterpret_cast<float *>(const_cast<D3DXMATRIX *>(&(*g_Camera.GetViewMatrix()))));
     g_pProjectionVariable->SetMatrix(reinterpret_cast<float *>(const_cast<D3DXMATRIX *>(&(*g_Camera.GetProjMatrix()))));
-
-    g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[0]));
+    
+    g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[1]));
 
     D3D10_TECHNIQUE_DESC techDesc;
     g_pRender->GetDesc(&techDesc);
 
     UINT NumSubsets;
-    g_pMesh->GetAttributeTable(nullptr, &NumSubsets);
+    pmeshvec[0]->GetAttributeTable(nullptr, &NumSubsets);
 
     for (auto p = 0U; p < techDesc.Passes; p++)
     {
         g_pRender->GetPassByIndex(p)->Apply(0);
         for (auto s = 0U; s < NumSubsets; s++)
         {
-            g_pMesh->DrawSubset(s);
+            pmeshvec[0]->DrawSubset(s);
         }
     }
 
-    g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[1]));
+    D3DXMATRIX  World;
+    D3DXMatrixTranslation(&World, 1.0f, 0.0f, 0.0f);
+    D3DXMatrixMultiply(&World, &(*g_Camera.GetWorldMatrix()), &World);
+
+    // Update variables
+    g_pWorldVariable->SetMatrix(World);
+
+    g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[0]));
     
     // Set vertex buffer
     auto const stride = sizeof(SimpleVertex);
@@ -199,7 +211,9 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
 
 	pd3dDevice->IASetInputLayout(pLayout.get());
 
-    DXUTCreateSphere( pd3dDevice, 1.0f, 16, 16, &g_pMesh );
+    ID3DX10Mesh * pmesh;
+    DXUTCreateSphere( pd3dDevice, 1.0f, 16, 16, &pmesh );
+    pmeshvec[0].reset(pmesh);
 
     // Create vertex buffer
     std::array<SimpleVertex, NUMVERTEXBUFFER> const vertices =
@@ -303,7 +317,7 @@ void CALLBACK OnD3D10DestroyDevice( void* pUserContext )
 	pLayout.reset();
     pIndexBuffer.reset();
     pVertexBuffer.reset();
-    SAFE_RELEASE(g_pMesh);
+    pmeshvec[0].reset();
 }
 
 //--------------------------------------------------------------------------------------
