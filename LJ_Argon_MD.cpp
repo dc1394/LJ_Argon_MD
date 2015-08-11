@@ -230,9 +230,11 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
 
 	pd3dDevice->IASetInputLayout(pInputLayout.get());
 
-    ID3DX10Mesh * pmesh;
-    DXUTCreateSphere( pd3dDevice, 1.0f, 16, 16, &pmesh );
-    pmeshvec[0].reset(pmesh);
+    for (auto i = 0; i < NUMMESH; i++) {
+        ID3DX10Mesh * pmesh;
+        DXUTCreateSphere(pd3dDevice, 0.1f, 16, 16, &pmesh);
+        pmeshvec[i].reset(pmesh);
+    }
 
     // Create vertex buffer
     std::array<SimpleVertex, NUMVERTEXBUFFER> const vertices =
