@@ -11,6 +11,24 @@
 #include <memory>               // for std::unique_ptr
 #include <vector>               // std::vector
 
+//! A global variable (constant).
+/*!
+    インデックスバッファの個数
+*/
+static auto const NUMINDEXBUFFER = 16U;
+
+//! A global variable (constant).
+/*!
+    頂点バッファの個数
+*/
+static auto const NUMMESH = 2U;
+
+//! A global variable (constant).
+/*!
+    頂点バッファの個数
+*/
+static auto const NUMVERTEXBUFFER = 8U;
+
 //! A global variable.
 /*!
     バッファー リソース
@@ -21,7 +39,7 @@ D3D10_BUFFER_DESC bd;
 /*!
     メッシュへのスマートポインタが格納された可変長配列
 */
-std::vector<std::unique_ptr<ID3DX10Mesh, utility::Safe_Release<ID3DX10Mesh>>> pmeshvec(2);
+std::vector<std::unique_ptr<ID3DX10Mesh, utility::Safe_Release<ID3DX10Mesh>>> pmeshvec(NUMMESH);
 
 //! A global variable.
 /*!
@@ -39,7 +57,7 @@ std::unique_ptr<ID3D10Buffer, utility::Safe_Release<ID3D10Buffer>> pIndexBuffer;
 /*!
 	入力レイアウト インターフェイス
 */
-std::unique_ptr<ID3D10InputLayout, utility::Safe_Release<ID3D10InputLayout>> pLayout;
+std::unique_ptr<ID3D10InputLayout, utility::Safe_Release<ID3D10InputLayout>> pInputLayout;
 
 //! A global variable.
 /*!
@@ -61,8 +79,7 @@ D3DXVECTOR4 g_Colors[2] =
 };
 CModelViewerCamera          g_Camera;
 
-static auto const NUMVERTEXBUFFER = 8;
-static auto const NUMINDEXBUFFER = 16;
+
 
 //--------------------------------------------------------------------------------------
 // Structures
@@ -87,48 +104,50 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
     g_pViewVariable->SetMatrix(reinterpret_cast<float *>(const_cast<D3DXMATRIX *>(&(*g_Camera.GetViewMatrix()))));
     g_pProjectionVariable->SetMatrix(reinterpret_cast<float *>(const_cast<D3DXMATRIX *>(&(*g_Camera.GetProjMatrix()))));
     
-    g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[1]));
-
     D3D10_TECHNIQUE_DESC techDesc;
     g_pRender->GetDesc(&techDesc);
 
-    UINT NumSubsets;
-    pmeshvec[0]->GetAttributeTable(nullptr, &NumSubsets);
-
-    for (auto p = 0U; p < techDesc.Passes; p++)
-    {
-        g_pRender->GetPassByIndex(p)->Apply(0);
-        for (auto s = 0U; s < NumSubsets; s++)
-        {
-            pmeshvec[0]->DrawSubset(s);
-        }
-    }
-
-    D3DXMATRIX  World;
-    D3DXMatrixTranslation(&World, 1.0f, 0.0f, 0.0f);
-    D3DXMatrixMultiply(&World, &(*g_Camera.GetWorldMatrix()), &World);
-
-    // Update variables
-    g_pWorldVariable->SetMatrix(World);
-
     g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[0]));
-    
+
     // Set vertex buffer
     auto const stride = sizeof(SimpleVertex);
     auto const offset = 0U;
-	auto const pVertexBuffertmp = pVertexBuffer.get();
-	pd3dDevice->IASetVertexBuffers(0, 1, &pVertexBuffertmp, &stride, &offset);
-	
+    auto const pVertexBuffertmp = pVertexBuffer.get();
+    pd3dDevice->IASetVertexBuffers(0, 1, &pVertexBuffertmp, &stride, &offset);
+
     // Set index buffer
-	pd3dDevice->IASetIndexBuffer(pIndexBuffer.get(), DXGI_FORMAT_R32_UINT, 0);
+    pd3dDevice->IASetIndexBuffer(pIndexBuffer.get(), DXGI_FORMAT_R32_UINT, 0);
 
     // Set primitive topology
     pd3dDevice->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_LINESTRIP);
-        
+
     for (auto p = 0U; p < techDesc.Passes; p++)
     {
         g_pRender->GetPassByIndex(p)->Apply(0);
         pd3dDevice->DrawIndexed(NUMINDEXBUFFER, 0, 0);
+    }
+
+    for (auto i = 0; i < NUMMESH; i++) {
+        g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[1]));
+
+        D3DXMATRIX  World;
+        D3DXMatrixTranslation(&World, 1.0f, 0.0f, 0.0f);
+        D3DXMatrixMultiply(&World, &(*g_Camera.GetWorldMatrix()), &World);
+
+        // Update variables
+        g_pWorldVariable->SetMatrix(World);
+
+        UINT NumSubsets;
+        pmeshvec[i]->GetAttributeTable(nullptr, &NumSubsets);
+
+        for (auto p = 0U; p < techDesc.Passes; p++)
+        {
+            g_pRender->GetPassByIndex(p)->Apply(0);
+            for (auto s = 0U; s < NumSubsets; s++)
+            {
+                pmeshvec[i]->DrawSubset(s);
+            }
+        }
     }
 }
 
@@ -207,9 +226,9 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
 			sizeof(layout) / sizeof(layout[0]), 
             PassDesc.pIAInputSignature,
 			PassDesc.IAInputSignatureSize, &pLayouttmp ) );
-	pLayout.reset(pLayouttmp);
+	pInputLayout.reset(pLayouttmp);
 
-	pd3dDevice->IASetInputLayout(pLayout.get());
+	pd3dDevice->IASetInputLayout(pInputLayout.get());
 
     ID3DX10Mesh * pmesh;
     DXUTCreateSphere( pd3dDevice, 1.0f, 16, 16, &pmesh );
@@ -267,9 +286,8 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
     utility::v_return(pd3dDevice->CreateBuffer(&bd, &InitData, &pIndexBuffertmp));
 	pIndexBuffer.reset(pIndexBuffertmp);
 	
-    D3DXVECTOR3 vEye(0, 4, -4);
-    D3DXVECTOR3 vLook(0, 0, 0);
-
+    D3DXVECTOR3 vEye(0.0f, 4.0f, -4.0f);
+    D3DXVECTOR3 vLook(0.0f, 0.0f, 0.0f);
     D3DXVECTOR3 Up(0.0f, 1.0f, 0.0f);
     D3DXMatrixLookAtLH(&g_View, &vEye, &vLook, &Up);
 
@@ -286,7 +304,7 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
 //--------------------------------------------------------------------------------------
 HRESULT CALLBACK OnD3D10ResizedSwapChain( ID3D10Device* pd3dDevice, IDXGISwapChain *pSwapChain, const DXGI_SURFACE_DESC* pBackBufferSurfaceDesc, void* pUserContext )
 {
-    float fAspectRatio = pBackBufferSurfaceDesc->Width / (FLOAT)pBackBufferSurfaceDesc->Height;
+    auto const fAspectRatio = pBackBufferSurfaceDesc->Width / static_cast<FLOAT>(pBackBufferSurfaceDesc->Height);
     g_Camera.SetProjParams(D3DX_PI / 4, fAspectRatio, 0.1f, 1000.0f);
     g_Camera.SetWindow(pBackBufferSurfaceDesc->Width, pBackBufferSurfaceDesc->Height);
 
@@ -314,7 +332,7 @@ void CALLBACK OnD3D10ReleasingSwapChain( void* pUserContext )
 void CALLBACK OnD3D10DestroyDevice( void* pUserContext )
 {
     pEffect.reset();
-	pLayout.reset();
+	pInputLayout.reset();
     pIndexBuffer.reset();
     pVertexBuffer.reset();
     pmeshvec[0].reset();
