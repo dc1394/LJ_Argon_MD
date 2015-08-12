@@ -127,27 +127,30 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
         pd3dDevice->DrawIndexed(NUMINDEXBUFFER, 0, 0);
     }
 
-    for (auto i = 0; i < NUMMESH; i++) {
+    auto i = 0;
+    for (auto & pmesh : pmeshvec) {
         g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[1]));
 
         D3DXMATRIX  World;
-        D3DXMatrixTranslation(&World, 1.0f, 0.0f, 0.0f);
+        D3DXMatrixTranslation(&World, 1.0f * i, 0.0f, 0.0f);
         D3DXMatrixMultiply(&World, &(*g_Camera.GetWorldMatrix()), &World);
 
         // Update variables
         g_pWorldVariable->SetMatrix(World);
 
         UINT NumSubsets;
-        pmeshvec[i]->GetAttributeTable(nullptr, &NumSubsets);
+        pmesh->GetAttributeTable(nullptr, &NumSubsets);
 
         for (auto p = 0U; p < techDesc.Passes; p++)
         {
             g_pRender->GetPassByIndex(p)->Apply(0);
             for (auto s = 0U; s < NumSubsets; s++)
             {
-                pmeshvec[i]->DrawSubset(s);
+                pmesh->DrawSubset(s);
             }
         }
+
+        i++;
     }
 }
 
@@ -219,21 +222,21 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
 	D3D10_PASS_DESC PassDesc;
     g_pRender->GetPassByIndex( 0 )->GetDesc( &PassDesc );
 
-	ID3D10InputLayout * pLayouttmp;
+	ID3D10InputLayout * pInputLayouttmp;
     utility::v_return(
 		pd3dDevice->CreateInputLayout(
 			layout,
 			sizeof(layout) / sizeof(layout[0]), 
             PassDesc.pIAInputSignature,
-			PassDesc.IAInputSignatureSize, &pLayouttmp ) );
-	pInputLayout.reset(pLayouttmp);
+			PassDesc.IAInputSignatureSize, &pInputLayouttmp ) );
+	pInputLayout.reset(pInputLayouttmp);
 
 	pd3dDevice->IASetInputLayout(pInputLayout.get());
 
-    for (auto i = 0; i < NUMMESH; i++) {
-        ID3DX10Mesh * pmesh;
-        DXUTCreateSphere(pd3dDevice, 0.1f, 16, 16, &pmesh);
-        pmeshvec[i].reset(pmesh);
+    for (auto & pmesh : pmeshvec) {
+        ID3DX10Mesh * pmeshtmp;
+        DXUTCreateSphere(pd3dDevice, 1.0f, 16, 16, &pmeshtmp);
+        pmesh.reset(pmeshtmp);
     }
 
     // Create vertex buffer
@@ -290,7 +293,7 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
 	
     D3DXVECTOR3 vEye(0.0f, 4.0f, -4.0f);
     D3DXVECTOR3 vLook(0.0f, 0.0f, 0.0f);
-    D3DXVECTOR3 Up(0.0f, 1.0f, 0.0f);
+    D3DXVECTOR3 const Up(0.0f, 1.0f, 0.0f);
     D3DXMatrixLookAtLH(&g_View, &vEye, &vLook, &Up);
 
     // Update Variables that never change
@@ -306,7 +309,8 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
 //--------------------------------------------------------------------------------------
 HRESULT CALLBACK OnD3D10ResizedSwapChain( ID3D10Device* pd3dDevice, IDXGISwapChain *pSwapChain, const DXGI_SURFACE_DESC* pBackBufferSurfaceDesc, void* pUserContext )
 {
-    auto const fAspectRatio = pBackBufferSurfaceDesc->Width / static_cast<FLOAT>(pBackBufferSurfaceDesc->Height);
+    auto const fAspectRatio = static_cast<float>(pBackBufferSurfaceDesc->Width) /
+        static_cast<float>(pBackBufferSurfaceDesc->Height);
     g_Camera.SetProjParams(D3DX_PI / 4, fAspectRatio, 0.1f, 1000.0f);
     g_Camera.SetWindow(pBackBufferSurfaceDesc->Width, pBackBufferSurfaceDesc->Height);
 
@@ -337,7 +341,10 @@ void CALLBACK OnD3D10DestroyDevice( void* pUserContext )
 	pInputLayout.reset();
     pIndexBuffer.reset();
     pVertexBuffer.reset();
-    pmeshvec[0].reset();
+
+    for (auto & pmesh : pmeshvec) {
+        pmesh.reset();
+    }
 }
 
 //--------------------------------------------------------------------------------------

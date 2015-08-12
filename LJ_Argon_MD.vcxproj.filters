@@ -15,6 +15,9 @@
     <Filter Include="utility">
       <UniqueIdentifier>{1ec3c0c7-cd94-423d-9f39-48d59fa8acf7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="moleculardynamics">
+      <UniqueIdentifier>{8c9d2e6b-cf1e-410a-9b05-dab75095528c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="DXUT\Optional\directx.ico">
@@ -96,11 +99,17 @@
     <ClInclude Include="utility\utility.h">
       <Filter>utility</Filter>
     </ClInclude>
+    <ClInclude Include="moleculardynamics\Ar_moleculardynamics.h">
+      <Filter>moleculardynamics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LJ_Argon_MD.cpp" />
     <ClCompile Include="utility\utility.cpp">
       <Filter>utility</Filter>
+    </ClCompile>
+    <ClCompile Include="moleculardynamics\Ar_moleculardynamics.cpp">
+      <Filter>moleculardynamics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

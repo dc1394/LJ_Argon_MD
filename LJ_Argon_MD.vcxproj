@@ -384,7 +384,9 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="moleculardynamics\Ar_moleculardynamics.cpp" />
     <ClCompile Include="utility\utility.cpp" />
+    <ClInclude Include="moleculardynamics\Ar_moleculardynamics.h" />
     <ClInclude Include="utility\property.h" />
     <ClInclude Include="utility\utility.h" />
     <None Include="DXUT\Optional\directx.ico" />
