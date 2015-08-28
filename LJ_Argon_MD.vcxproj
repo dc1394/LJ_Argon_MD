@@ -385,8 +385,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="moleculardynamics\Ar_moleculardynamics.cpp" />
+    <ClCompile Include="myrandom\myrand.cpp" />
     <ClCompile Include="utility\utility.cpp" />
     <ClInclude Include="moleculardynamics\Ar_moleculardynamics.h" />
+    <ClInclude Include="myrandom\myrand.h" />
     <ClInclude Include="utility\property.h" />
     <ClInclude Include="utility\utility.h" />
     <None Include="DXUT\Optional\directx.ico" />

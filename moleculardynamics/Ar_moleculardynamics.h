@@ -1,116 +1,309 @@
-#ifdef _AR_MOLECULARDYNAMICS_H_
+﻿/*! \file Ar_moleculardynamics.h
+	\brief アルゴンに対して、分子動力学シミュレーションを行うクラスの宣言
+
+	Copyright ©  2015 @dc1394 All Rights Reserved.
+	This software is released under the BSD 2-Clause License.
+*/
+
+#ifndef _AR_MOLECULARDYNAMICS_H_
 #define _AR_MOLECULARDYNAMICS_H_
 
+#pragma once
+
 #include <array>    // for std::array
+#include <cstdint>	// for std::int32_t
+#include <vector>	// for std::vector
 
 namespace moleculardynamics {
     //! A class.
     /*!
-        �A���S���ɑ΂��āA���q���͊w�V�~�����[�V�������s���N���X
+        アルゴンに対して、分子動力学シミュレーションを行うクラス
     */
     class Ar_moleculardynamics final {
-        // #region �R���X�g���N�^�E�f�X�g���N�^
+        // #region コンストラクタ・デストラクタ
 
     public:
         //! A constructor.
         /*!
-            �R���X�g���N�^
+            コンストラクタ
         */
-        Ar_moleculardynamics() = default;
+        Ar_moleculardynamics();
 
         //! A destructor.
         /*!
-            �f�t�H���g�f�X�g���N�^
+            デフォルトデストラクタ
         */
         ~Ar_moleculardynamics() = default;
 
-        // #endregion �R���X�g���N�^�E�f�X�g���N�^
+        // #endregion コンストラクタ・デストラクタ
 
-        // #region �����o�֐�
-        
+		// #region publicメンバ関数
+
         //! A public member function.
         /*!
-            ���q�ɓ����͂��v�Z����
+            原子に働く力を計算する
         */
         void Calc_Forces();
-
+		
         //! A public member function.
         /*!
-            ���q���ړ�������
+            原子を移動させる
         */
         void Move_Atoms();
+
         //void Output_Data();
 
-        // #endregion �����o�֐�
+        // #endregion publicメンバ関数
 
-        // #region �����o�ϐ�
+		// #region privateメンバ関数
 
-        //! A private member variable.
+	private:
+		//! A private member function.
+		/*!
+			原子の初期位置を決める
+		*/
+		void MD_initPos();
+
+		//! A private member function.
+		/*!
+			原子の初期速度を決める
+		*/
+		void MD_initVel();
+
+		//! A private member function.
+		/*!
+			ノルムの二乗を求める
+			\param x x座標
+			\param y y座標
+			\param z z座標
+			\return ノルムの二乗
+		*/
+		double norm2(double x, double y, double z);
+
+		// #endregion privateメンバ関数
+
+        // #region メンバ変数
+
+	private:
+		//! A private member variable (constant).
+		/*!
+			Woodcockの温度スケーリングの係数
+		*/
+		double const alpha = 0.2;
+
+        //! A private member variable (constant).
         /*!
-            ���ԍ���
+            時間刻み
         */
-        double dt;
-        double const Tg;
-        double const rc;
-        double const rc2;
-        double const rcm12;
-        double const rcm6;
+        double const dt = 0.001;
+
+		//! A private member variable (constant).
+		/*!
+			時間刻みの二乗
+		*/
+		double const dt2;
+
+		//! A private member variable.
+		/*!
+			格子定数
+		*/
+		double lat;
+
+		//! A private member variable (constant).
+		/*!
+			スーパーセルの個数
+		*/
+		std::int32_t const Nc = 5;
+
+		//! A private member variable.
+		/*!
+			n個目の原子に働く力のx成分
+		*/
+		std::vector<double> FX;
+
+		//! A private member variable.
+		/*!
+			n個目の原子に働く力のy成分
+		*/
+		std::vector<double> FY;
+
+		//! A private member variable.
+		/*!
+			n個目の原子に働く力のz成分
+		*/
+		std::vector<double> FZ;
+
+		//! A private member variable.
+		/*!
+			MDのステップ数
+		*/
+		std::int32_t MD_iter = 1;
+
+		//! A private member variable (constant).
+		/*!
+			相互作用を計算するセルの個数
+		*/
+		std::int32_t const ncp = 2;
+		
+		//! A private member variable.
+		/*!
+			原子の個数
+		*/
+		std::int32_t NumAtom;
+
+		//! A private member variable (constant).
+		/*!
+			カットオフ半径
+		*/
+		double const rc = 2.5;
+
+		//! A private member variable (constant).
+		/*!
+			カットオフ半径の2乗
+		*/
+		double const rc2;
+
+		//! A private member variable (constant).
+		/*!
+			カットオフ半径の逆数の6乗
+		*/
+		double const rcm6;
+
+		//! A private member variable (constant).
+		/*!
+			カットオフ半径の逆数の12乗
+		*/
+		double const rcm12;
+		
+		//! A private member variable.
+		/*!
+			密度
+		*/
+		double rho;
+
+		//! A private member variable (constant).
+		/*!
+			格子定数のスケーリングの定数
+		*/
+		double const scale = 1.0;
+
+		//! A private member variable.
+		/*!
+			時間	
+		*/
+		double t = 0.0;
+
+		//! A private member variable.
+		/*!
+			計算された温度Tcalc
+		*/
+		double Tc = 0.0;
+
+		//! A private member variable.
+		/*!
+			与える温度Tgiven
+		*/
+        double Tg;
+
+		//! A private member variable.
+		/*!
+			運動エネルギー
+		*/
+		double Uk = 0.0;
+		
+		//! A private member variable.
+		/*!
+			ポテンシャルエネルギー
+		*/
+		double Up = 0.0;
+
+		//! A private member variable.
+		/*!
+			与える温度Tgiven
+		*/
+		double Utot = 0.0;
+		
+		//! A private member variable (constant).
+		/*!
+			ポテンシャルエネルギーの打ち切り
+		*/
         double const Vrc;
-        double const scale;
+        
+		//! A private member variable.
+		/*!
+			n個目の原子の速度のx成分
+		*/
+		std::vector<double> VX;
 
-        double const dt2;
-        double const alpha;
+		//! A private member variable.
+		/*!
+			n個目の原子の速度のy成分
+		*/
+		std::vector<double> VY;
 
-        double lat;
-        double rho;
-        double Tc;
-        double Up;
-        double Uk;
-        double Utot;
-        double t;
+		//! A private member variable.
+		/*!
+			n個目の原子の速度のz成分
+		*/
+		std::vector<double> VZ;
+		        
+        //uint MD_iter;
+	
+		//! A private member variable.
+		/*!
+			n個目の原子のx座標
+		*/
+        std::vector<double> X;
 
-        const int ncp;
-        const int Nc;
+		//! A private member variable.
+		/*!
+			n個目の原子の初期x座標
+		*/
+		std::vector<double> X1;
+		
+		//! A private member variable.
+		/*!
+			n個目の原子のy座標
+		*/
+		std::vector<double> Y;
 
-        int NumAtom;
-        uint MD_iter;
+		//! A private member variable.
+		/*!
+			n個目の原子の初期y座標
+		*/
+		std::vector<double> Y1;
+		
+		//! A private member variable.
+		/*!
+			n個目の原子のz座標
+		*/
+		std::vector<double> Z;
+        
+		//! A private member variable.
+		/*!
+			n個目の原子の初期z座標
+		*/
+		std::vector<double> Z1;
 
-        boost::array<double, ASIZE1> X;
-        boost::array<double, ASIZE1> Y;
-        boost::array<double, ASIZE1> Z;
-        boost::array<double, ASIZE1> X1;
-        boost::array<double, ASIZE1> Y1;
-        boost::array<double, ASIZE1> Z1;
-        boost::array<double, ASIZE1> FX;
-        boost::array<double, ASIZE1> FY;
-        boost::array<double, ASIZE1> FZ;
-        boost::array<double, ASIZE1> VX;
-        boost::array<double, ASIZE1> VY;
-        boost::array<double, ASIZE1> VZ;
+		// #endregion メンバ変数
 
-        // #region �֎~���ꂽ�R���X�g���N�^�E�����o�֐�
-
-        //! A private constructor (deleted).
-        /*!
-            �f�t�H���g�R���X�g���N�^�i�֎~�j
-        */
-        Ar_moleculardynamics() = delete;
+        // #region 禁止されたコンストラクタ・メンバ関数
 
         //! A private copy constructor (deleted).
         /*!
-            �R�s�[�R���X�g���N�^�i�֎~�j
+            コピーコンストラクタ（禁止）
         */
         Ar_moleculardynamics(Ar_moleculardynamics const &) = delete;
 
         //! A private member function (deleted).
         /*!
-        operator=()�̐錾�i�֎~�j
-        \param �R�s�[���̃I�u�W�F�N�g�i���g�p�j
-        \return �R�s�[���̃I�u�W�F�N�g
+			operator=()の宣言（禁止）
+			\param コピー元のオブジェクト（未使用）
+			\return コピー元のオブジェクト
         */
         Ar_moleculardynamics & operator=(Ar_moleculardynamics const &) = delete;
 
-        // #endregion �֎~���ꂽ�R���X�g���N�^�E�����o�֐�
+        // #endregion 禁止されたコンストラクタ・メンバ関数
     };
 }
 

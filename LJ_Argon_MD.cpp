@@ -179,8 +179,8 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
     HRESULT hr = S_OK;
 
     // Find the D3DX effect file
-    WCHAR str[MAX_PATH];
-    V_RETURN( DXUTFindDXSDKMediaFileCch( str, MAX_PATH, L"Normal.fx" ) );
+    std::array<WCHAR, MAX_PATH> str;
+    V_RETURN( DXUTFindDXSDKMediaFileCch( str.data(), MAX_PATH, L"Normal.fx" ) );
     DWORD dwShaderFlags = D3D10_SHADER_ENABLE_STRICTNESS;
 #if defined( DEBUG ) || defined( _DEBUG )
     dwShaderFlags |= D3D10_SHADER_DEBUG;
@@ -189,7 +189,7 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
 	ID3D10Effect * pEffecttmp;
 	utility::v_return(
 		D3DX10CreateEffectFromFile(
-			str,
+			str.data(),
 			nullptr,
 			nullptr,
 			"fx_4_0",

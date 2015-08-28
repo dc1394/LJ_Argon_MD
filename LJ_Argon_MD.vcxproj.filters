@@ -18,6 +18,9 @@
     <Filter Include="moleculardynamics">
       <UniqueIdentifier>{8c9d2e6b-cf1e-410a-9b05-dab75095528c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="myrandom">
+      <UniqueIdentifier>{8937956e-25fd-47eb-9532-48ccc463c4d3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="DXUT\Optional\directx.ico">
@@ -102,6 +105,9 @@
     <ClInclude Include="moleculardynamics\Ar_moleculardynamics.h">
       <Filter>moleculardynamics</Filter>
     </ClInclude>
+    <ClInclude Include="myrandom\myrand.h">
+      <Filter>myrandom</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LJ_Argon_MD.cpp" />
@@ -110,6 +116,9 @@
     </ClCompile>
     <ClCompile Include="moleculardynamics\Ar_moleculardynamics.cpp">
       <Filter>moleculardynamics</Filter>
+    </ClCompile>
+    <ClCompile Include="myrandom\myrand.cpp">
+      <Filter>myrandom</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
