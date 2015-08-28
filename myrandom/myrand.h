@@ -43,7 +43,7 @@ namespace myrandom {
 
         //!  A public member function.
         /*!
-            [0.0, 1.0]の閉区間で一様乱数を生成する
+            [min, max]の閉区間で一様乱数を生成する
         */
         double myrand()
         {
