@@ -6,6 +6,7 @@
 #include "SDKmisc.h"
 #include "DXUTShapes.h"
 #include "DXUTcamera.h"
+#include "moleculardynamics/Ar_moleculardynamics.h"
 #include "utility/utility.h"
 #include <array>                // for std::array
 #include <memory>               // for std::unique_ptr
@@ -79,7 +80,7 @@ D3DXVECTOR4 g_Colors[2] =
 };
 CModelViewerCamera          g_Camera;
 
-
+moleculardynamics::Ar_moleculardynamics armd;
 
 //--------------------------------------------------------------------------------------
 // Structures
@@ -94,6 +95,9 @@ struct SimpleVertex
 //--------------------------------------------------------------------------------------
 void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float fElapsedTime, void* pUserContext )
 {
+    armd.Calc_Forces();
+    armd.Move_Atoms();
+
     // Clear render target and the depth stencil 
     std::array<float, 4> const ClearColor = { 0.176f, 0.196f, 0.667f, 0.0f };
     pd3dDevice->ClearRenderTargetView(DXUTGetD3D10RenderTargetView(), ClearColor.data());
