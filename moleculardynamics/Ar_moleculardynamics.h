@@ -10,11 +10,14 @@
 
 #pragma once
 
-#include <array>    // for std::array
-#include <cstdint>	// for std::int32_t
-#include <vector>	// for std::vector
+#include "../utility/property.h"
+#include <array>					// for std::array
+#include <cstdint>					// for std::int32_t
+#include <vector>					// for std::vector
 
 namespace moleculardynamics {
+	using namespace utility;
+
     //! A class.
     /*!
         アルゴンに対して、分子動力学シミュレーションを行うクラス
@@ -81,6 +84,29 @@ namespace moleculardynamics {
 		double norm2(double x, double y, double z);
 
 		// #endregion privateメンバ関数
+
+		// #region プロパティ
+
+	public:
+		//! A property.
+		/*!
+			n番目の原子のx座標へのプロパティ
+		*/
+		Property<std::vector<double> const &> const X;
+
+		//! A property.
+		/*!
+			n番目の原子のy座標へのプロパティ
+		*/
+		Property<std::vector<double> const &> const Y;
+
+		//! A property.
+		/*!
+			n番目の原子のz座標へのプロパティ
+		*/
+		Property<std::vector<double> const &> const Z;
+
+		// #endregion プロパティ
 
         // #region メンバ変数
 
@@ -203,7 +229,7 @@ namespace moleculardynamics {
 		/*!
 			与える温度Tgiven
 		*/
-        double Tg;
+        double Tg = 2.5;
 
 		//! A private member variable.
 		/*!
@@ -219,7 +245,7 @@ namespace moleculardynamics {
 
 		//! A private member variable.
 		/*!
-			与える温度Tgiven
+			総エネルギー
 		*/
 		double Utot = 0.0;
 		
@@ -253,7 +279,7 @@ namespace moleculardynamics {
 		/*!
 			n個目の原子のx座標
 		*/
-        std::vector<double> X;
+        std::vector<double> X_;
 
 		//! A private member variable.
 		/*!
@@ -265,7 +291,7 @@ namespace moleculardynamics {
 		/*!
 			n個目の原子のy座標
 		*/
-		std::vector<double> Y;
+		std::vector<double> Y_;
 
 		//! A private member variable.
 		/*!
@@ -277,7 +303,7 @@ namespace moleculardynamics {
 		/*!
 			n個目の原子のz座標
 		*/
-		std::vector<double> Z;
+		std::vector<double> Z_;
         
 		//! A private member variable.
 		/*!

@@ -132,11 +132,12 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
     }
 
     auto i = 0;
+	auto aa = armd.X()[0];
     for (auto & pmesh : pmeshvec) {
         g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[1]));
 
         D3DXMATRIX  World;
-        D3DXMatrixTranslation(&World, 1.0f * i, 0.0f, 0.0f);
+        D3DXMatrixTranslation(&World, 0.1f * aa, 0.0f, 0.0f);
         D3DXMatrixMultiply(&World, &(*g_Camera.GetWorldMatrix()), &World);
 
         // Update variables
@@ -238,7 +239,7 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
 	pd3dDevice->IASetInputLayout(pInputLayout.get());
 
     for (auto & pmesh : pmeshvec) {
-        ID3DX10Mesh * pmeshtmp;
+        ID3DX10Mesh * pmeshtmp = nullptr;
         DXUTCreateSphere(pd3dDevice, 1.0f, 16, 16, &pmeshtmp);
         pmesh.reset(pmeshtmp);
     }

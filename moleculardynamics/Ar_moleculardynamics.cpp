@@ -8,7 +8,6 @@
 #include "DXUT.h"
 #include "Ar_moleculardynamics.h"
 #include "../myrandom/myrand.h"
-#include <boost/cast.hpp>               // for boost::numeric_cast
 #include <tbb/parallel_for.h>           // for tbb::parallel_for
 #include <tbb/partitioner.h>            // for tbb::auto_partitioner
 #include <tbb/task_scheduler_init.h>    // for tbb::task_scheduler_init
@@ -17,7 +16,11 @@ namespace moleculardynamics {
 	// #region コンストラクタ
 
 	Ar_moleculardynamics::Ar_moleculardynamics()
-		: dt2(dt * dt),
+		: 
+		X([this] { return std::cref(X_); }, nullptr),
+		Y([this] { return std::cref(Y_); }, nullptr),
+		Z([this] { return std::cref(Z_); }, nullptr),
+		dt2(dt * dt),
 		FX(Nc * Nc * Nc * 4),
 		FY(Nc * Nc * Nc * 4),
 		FZ(Nc * Nc * Nc * 4),
@@ -28,11 +31,11 @@ namespace moleculardynamics {
 		VX(Nc * Nc * Nc * 4),
 		VY(Nc * Nc * Nc * 4),
 		VZ(Nc * Nc * Nc * 4),
-		X(Nc * Nc * Nc * 4),
+		X_(Nc * Nc * Nc * 4),
 		X1(Nc * Nc * Nc * 4),
-		Y(Nc * Nc * Nc * 4),
+		Y_(Nc * Nc * Nc * 4),
 		Y1(Nc * Nc * Nc * 4),
-		Z(Nc * Nc * Nc * 4),
+		Z_(Nc * Nc * Nc * 4),
 		Z1(Nc * Nc * Nc * 4)
 	{
 		// initalize parameters
@@ -44,6 +47,8 @@ namespace moleculardynamics {
 		MD_initVel();
 
 		lat *= static_cast<double>(Nc);
+
+		tbb::task_scheduler_init init;
 	}
 
 	// #endregion コンストラクタ
@@ -52,48 +57,53 @@ namespace moleculardynamics {
 
     void Ar_moleculardynamics::Calc_Forces()
     {
-        for (auto n = 0; n < NumAtom; n++) {
-            for (auto m = 0; m < NumAtom; m++) {
+		tbb::parallel_for(
+			0,
+			NumAtom,
+			1,
+			[this](std::int32_t n) {
+			for (auto m = 0; m < NumAtom; m++) {
 
-                // ±ncp分のセル内の原子との相互作用を計算
-                for (auto i = -ncp; i <= ncp; i++) {
-                    for (auto j = -ncp; j <= ncp; j++) {
-                        for (auto k = -ncp; k <= ncp; k++) {
-                            auto const sx = static_cast<double>(i)* lat;
-                            auto const sy = static_cast<double>(j)* lat;
-                            auto const sz = static_cast<double>(k)* lat;
+				// ±ncp分のセル内の原子との相互作用を計算
+				for (auto i = -ncp; i <= ncp; i++) {
+					for (auto j = -ncp; j <= ncp; j++) {
+						for (auto k = -ncp; k <= ncp; k++) {
+							auto const sx = static_cast<double>(i)* lat;
+							auto const sy = static_cast<double>(j)* lat;
+							auto const sz = static_cast<double>(k)* lat;
 
-                            // 自分自身との相互作用を排除
-                            if (n != m || i != 0 || j != 0 || k != 0) {
-                                auto const dx = X[n] - (X[m] + sx);
-                                auto const dy = Y[n] - (Y[m] + sy);
-                                auto const dz = Z[n] - (Z[m] + sz);
+							// 自分自身との相互作用を排除
+							if (n != m || i != 0 || j != 0 || k != 0) {
+								auto const dx = X_[n] - (X_[m] + sx);
+								auto const dy = Y_[n] - (Y_[m] + sy);
+								auto const dz = Z_[n] - (Z_[m] + sz);
 
-                                auto const r2 = norm2(dx, dy, dz);
-                                // 打ち切り距離内であれば計算
-                                if (r2 <= rc2) {
-                                    auto const r = sqrt(r2);
-                                    auto const rm6 = 1.0 / (r2 * r2 * r2);
-                                    auto const rm7 = rm6 / r;
-                                    auto const rm12 = rm6 * rm6;
-                                    auto const rm13 = rm12 / r;
+								auto const r2 = norm2(dx, dy, dz);
+								// 打ち切り距離内であれば計算
+								if (r2 <= rc2) {
+									auto const r = sqrt(r2);
+									auto const rm6 = 1.0 / (r2 * r2 * r2);
+									auto const rm7 = rm6 / r;
+									auto const rm12 = rm6 * rm6;
+									auto const rm13 = rm12 / r;
 
-                                    auto const Fr = 48.0 * rm13 - 24.0 * rm7;
+									auto const Fr = 48.0 * rm13 - 24.0 * rm7;
 
-                                    FX[n] += dx / r * Fr;
-                                    FY[n] += dy / r * Fr;
-                                    FZ[n] += dz / r * Fr;
+									FX[n] += dx / r * Fr;
+									FY[n] += dy / r * Fr;
+									FZ[n] += dz / r * Fr;
 
-                                    // 0.5 for double counting
-                                    // エネルギーの計算、ただし二重計算のために0.5をかけておく
-                                    Up += 0.5 * (4.0 * (rm12 - rm6) - Vrc);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+									// 0.5 for double counting
+									// エネルギーの計算、ただし二重計算のために0.5をかけておく
+									Up += 0.5 * (4.0 * (rm12 - rm6) - Vrc);
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+			tbb::auto_partitioner());
     }
 
     void Ar_moleculardynamics::Move_Atoms()
@@ -116,87 +126,98 @@ namespace moleculardynamics {
         Tc = Uk / (1.5 * static_cast<double>(NumAtom));
 
         auto s = std::sqrt((Tg + alpha * (Tc - Tg)) / Tc);
-
+		
         switch (MD_iter) {
         case 1:
             // update the coordinates by the second order Euler method
             // 最初のステップだけ修正Euler法で時間発展
-            for (auto n = 0; n < NumAtom; n++) {
-                X1[n] = X[n];
-                Y1[n] = Y[n];
-                Z1[n] = Z[n];
+			tbb::parallel_for(
+				0,
+				NumAtom,
+				1,
+				[this, s](std::int32_t n) {
+				X1[n] = X_[n];
+				Y1[n] = Y_[n];
+				Z1[n] = Z_[n];
 
-                // scaling of velocity
-                VX[n] *= s;
-                VY[n] *= s;
-                VZ[n] *= s;
+				// scaling of velocity
+				VX[n] *= s;
+				VY[n] *= s;
+				VZ[n] *= s;
 
-                // update coordinates and velocity
-                X[n] += dt * VX[n] + 0.5 * FX[n] * dt2;
-                Y[n] += dt * VY[n] + 0.5 * FY[n] * dt2;
-                Z[n] += dt * VZ[n] + 0.5 * FZ[n] * dt2;
+				// update coordinates and velocity
+				X_[n] += dt * VX[n] + 0.5 * FX[n] * dt2;
+				Y_[n] += dt * VY[n] + 0.5 * FY[n] * dt2;
+				Z_[n] += dt * VZ[n] + 0.5 * FZ[n] * dt2;
 
-                VX[n] += dt * FX[n];
-                VY[n] += dt * FY[n];
-                VZ[n] += dt * FZ[n];
-            }
+				VX[n] += dt * FX[n];
+				VY[n] += dt * FY[n];
+				VZ[n] += dt * FZ[n];
+			},
+				tbb::auto_partitioner());
             break;
 
         default:
             // update the coordinates by the Verlet method
-            for (auto n = 0; n < NumAtom; n++) {
-                std::array<double, 3> rtmp;
-                rtmp[0] = X[n];
-                rtmp[1] = Y[n];
-                rtmp[2] = Z[n];
 
-                // update coordinates and velocity
-                // Verlet法の座標更新式において速度成分を抜き出し、その部分をスケールする
-#ifdef NVT
-                X[n] += s * (X[n] - X1[n]) + FX[n] * dt2;
-                Y[n] += s * (Y[n] - Y1[n]) + FY[n] * dt2;
-                Z[n] += s * (Z[n] - Z1[n]) + FZ[n] * dt2;
-#elif NVE
-                X[n] = 2.0 * X[n] - X1[n] + FX[n] * dt2;
-                Y[n] = 2.0 * Y[n] - Y1[n] + FY[n] * dt2;
-                Z[n] = 2.0 * Z[n] - Z1[n] + FZ[n] * dt2;
-#endif
-                VX[n] = 0.5 * (X[n] - X1[n]) / dt;
-                VY[n] = 0.5 * (Y[n] - Y1[n]) / dt;
-                VZ[n] = 0.5 * (Z[n] - Z1[n]) / dt;
+			tbb::parallel_for(
+				0,
+				NumAtom,
+				1,
+				[this, s](std::int32_t n) {
+				std::array<double, 3> rtmp;
+				rtmp[0] = X_[n];
+				rtmp[1] = Y_[n];
+				rtmp[2] = Z_[n];
 
-                X1[n] = rtmp[0];
-                Y1[n] = rtmp[1];
-                Z1[n] = rtmp[2];
-            }
+				// update coordinates and velocity
+				// Verlet法の座標更新式において速度成分を抜き出し、その部分をスケールする
+//#ifdef NVT
+				X_[n] += s * (X_[n] - X1[n]) + FX[n] * dt2;
+				Y_[n] += s * (Y_[n] - Y1[n]) + FY[n] * dt2;
+				Z_[n] += s * (Z_[n] - Z1[n]) + FZ[n] * dt2;
+//#elif NVE
+//				X_[n] = 2.0 * X_[n] - X1[n] + FX[n] * dt2;
+//				Y_[n] = 2.0 * Y_[n] - Y1[n] + FY[n] * dt2;
+//				Z_[n] = 2.0 * Z_[n] - Z1[n] + FZ[n] * dt2;
+//#endif
+				VX[n] = 0.5 * (X_[n] - X1[n]) / dt;
+				VY[n] = 0.5 * (Y_[n] - Y1[n]) / dt;
+				VZ[n] = 0.5 * (Z_[n] - Z1[n]) / dt;
+
+				X1[n] = rtmp[0];
+				Y1[n] = rtmp[1];
+				Z1[n] = rtmp[2];
+			},
+				tbb::auto_partitioner());
             break;
         }
 
         // consider the periodic boundary condination
         // セルの外側に出たら座標をセル内に戻す
         for (auto n = 0; n < NumAtom; n++) {
-            if (X[n] > lat) {
-                X[n] -= lat;
+            if (X_[n] > lat) {
+                X_[n] -= lat;
                 X1[n] -= lat;
             }
-            else if (X[n] < 0.0) {
-                X[n] += lat;
+            else if (X_[n] < 0.0) {
+                X_[n] += lat;
                 X1[n] += lat;
             }
-            if (Y[n] > lat) {
-                Y[n] -= lat;
+            if (Y_[n] > lat) {
+                Y_[n] -= lat;
                 Y1[n] -= lat;
             }
-            else if (Y[n] < 0.0) {
-                Y[n] += lat;
+            else if (Y_[n] < 0.0) {
+                Y_[n] += lat;
                 Y1[n] += lat;
             }
-            if (Z[n] > lat) {
-                Z[n] -= lat;
+            if (Z_[n] > lat) {
+                Z_[n] -= lat;
                 Z1[n] -= lat;
             }
-            else if (Z[n] < 0.0) {
-                Z[n] += lat;
+            else if (Z_[n] < 0.0) {
+                Z_[n] += lat;
                 Z1[n] += lat;
             }
         }
@@ -215,44 +236,37 @@ namespace moleculardynamics {
 		double sx, sy, sz;
 		auto n = 0;
 
-        tbb::task_scheduler_init init;
+		for (auto i = 0; i < Nc; i++) {
+			for (auto j = 0; j < Nc; j++) {
+				for (auto k = 0; k < Nc; k++) {
+				    // 基本セルをコピーする
+				    sx = static_cast<double>(i)* lat;
+				    sy = static_cast<double>(j)* lat;
+				    sz = static_cast<double>(k)* lat;
 
-        tbb::parallel_for(
-            std::uint32_t(0),
-            boost::numeric_cast<std::uint32_t>(Nc),
-            std::uint32_t(1),
-            [this, &sx, &sy, &sz, &n](std::uint32_t i) { 
-                for (auto j = 0; j < Nc; j++) {
-                    for (auto k = 0; k < Nc; k++) {
-                        // 基本セルをコピーする
-                        sx = static_cast<double>(i)* lat;
-                        sy = static_cast<double>(j)* lat;
-                        sz = static_cast<double>(k)* lat;
+				    // 基本セル内には4つの原子がある
+				    X_[n] = sx;
+				    Y_[n] = sy;
+				    Z_[n] = sz;
+				    n++;
 
-                        // 基本セル内には4つの原子がある
-                        X[n] = sx;
-                        Y[n] = sy;
-                        Z[n] = sz;
-                        n++;
+				    X_[n] = 0.5 * lat + sx;
+				    Y_[n] = 0.5 * lat + sy;
+				    Z_[n] = sz;
+				    n++;
 
-                        X[n] = 0.5 * lat + sx;
-                        Y[n] = 0.5 * lat + sy;
-                        Z[n] = sz;
-                        n++;
+				    X_[n] = sx;
+				    Y_[n] = 0.5 * lat + sy;
+				    Z_[n] = 0.5 * lat + sz;
+				    n++;
 
-                        X[n] = sx;
-                        Y[n] = 0.5 * lat + sy;
-                        Z[n] = 0.5 * lat + sz;
-                        n++;
-
-                        X[n] = 0.5 * lat + sx;
-                        Y[n] = sy;
-                        Z[n] = 0.5 * lat + sz;
-                        n++;
-                    }
+				    X_[n] = 0.5 * lat + sx;
+				    Y_[n] = sy;
+				    Z_[n] = 0.5 * lat + sz;
+				    n++;
+				}
             }
-        },
-        tbb::auto_partitioner());
+        }
 
 		NumAtom = n;
 
@@ -263,9 +277,9 @@ namespace moleculardynamics {
 		sz = 0.0;
 
 		for (auto n = 0; n < NumAtom; n++) {
-			sx += X[n];
-			sy += Y[n];
-			sz += Z[n];
+			sx += X_[n];
+			sy += Y_[n];
+			sz += Z_[n];
 		}
 
 		sx /= static_cast<double>(NumAtom);
@@ -273,9 +287,9 @@ namespace moleculardynamics {
 		sz /= static_cast<double>(NumAtom);
 
 		for (auto n = 0; n < NumAtom; n++) {
-			X[n] -= sx;
-			Y[n] -= sy;
-			Z[n] -= sz;
+			X_[n] -= sx;
+			Y_[n] -= sy;
+			Z_[n] -= sz;
 		}
 	}
 
