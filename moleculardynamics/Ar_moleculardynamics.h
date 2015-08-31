@@ -223,31 +223,31 @@ namespace moleculardynamics {
 		/*!
 			計算された温度Tcalc
 		*/
-		double Tc = 0.0;
+        double Tc;
 
 		//! A private member variable.
 		/*!
 			与える温度Tgiven
 		*/
-        double Tg = 2.5;
+        double Tg = 100.0;
 
 		//! A private member variable.
 		/*!
 			運動エネルギー
 		*/
-		double Uk = 0.0;
+		double Uk;
 		
 		//! A private member variable.
 		/*!
 			ポテンシャルエネルギー
 		*/
-		double Up = 0.0;
+		double Up;
 
 		//! A private member variable.
 		/*!
 			総エネルギー
 		*/
-		double Utot = 0.0;
+		double Utot;
 		
 		//! A private member variable (constant).
 		/*!
@@ -273,8 +273,6 @@ namespace moleculardynamics {
 		*/
 		std::vector<double> VZ;
 		        
-        //uint MD_iter;
-	
 		//! A private member variable.
 		/*!
 			n個目の原子のx座標

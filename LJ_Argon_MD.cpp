@@ -22,12 +22,6 @@ static auto const NUMINDEXBUFFER = 16U;
 /*!
     頂点バッファの個数
 */
-static auto const NUMMESH = 2U;
-
-//! A global variable (constant).
-/*!
-    頂点バッファの個数
-*/
 static auto const NUMVERTEXBUFFER = 8U;
 
 //! A global variable.
@@ -40,7 +34,7 @@ D3D10_BUFFER_DESC bd;
 /*!
     メッシュへのスマートポインタが格納された可変長配列
 */
-std::vector<std::unique_ptr<ID3DX10Mesh, utility::Safe_Release<ID3DX10Mesh>>> pmeshvec(NUMMESH);
+std::vector<std::unique_ptr<ID3DX10Mesh, utility::Safe_Release<ID3DX10Mesh>>> pmeshvec;
 
 //! A global variable.
 /*!
@@ -131,31 +125,28 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
         pd3dDevice->DrawIndexed(NUMINDEXBUFFER, 0, 0);
     }
 
-    auto i = 0;
-	auto aa = armd.X()[0];
-    for (auto & pmesh : pmeshvec) {
+    auto const size = pmeshvec.size();
+    for (auto i = 0; i < size; i++) {
         g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[1]));
 
         D3DXMATRIX  World;
-        D3DXMatrixTranslation(&World, 0.1f * aa, 0.0f, 0.0f);
+        D3DXMatrixTranslation(&World, armd.X()[i], armd.Y()[i], armd.Z()[i]);
         D3DXMatrixMultiply(&World, &(*g_Camera.GetWorldMatrix()), &World);
 
         // Update variables
         g_pWorldVariable->SetMatrix(World);
 
         UINT NumSubsets;
-        pmesh->GetAttributeTable(nullptr, &NumSubsets);
+        pmeshvec[i]->GetAttributeTable(nullptr, &NumSubsets);
 
         for (auto p = 0U; p < techDesc.Passes; p++)
         {
             g_pRender->GetPassByIndex(p)->Apply(0);
             for (auto s = 0U; s < NumSubsets; s++)
             {
-                pmesh->DrawSubset(s);
+                pmeshvec[i]->DrawSubset(s);
             }
         }
-
-        i++;
     }
 }
 
@@ -238,9 +229,10 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
 
 	pd3dDevice->IASetInputLayout(pInputLayout.get());
 
+    pmeshvec.resize(armd.X().size());
     for (auto & pmesh : pmeshvec) {
         ID3DX10Mesh * pmeshtmp = nullptr;
-        DXUTCreateSphere(pd3dDevice, 1.0f, 16, 16, &pmeshtmp);
+        DXUTCreateSphere(pd3dDevice, 0.2f, 16, 16, &pmeshtmp);
         pmesh.reset(pmeshtmp);
     }
 

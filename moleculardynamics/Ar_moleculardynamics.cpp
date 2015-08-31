@@ -57,6 +57,14 @@ namespace moleculardynamics {
 
     void Ar_moleculardynamics::Calc_Forces()
     {
+        for (int n = 0; n < NumAtom; n++) {
+            FX[n] = 0.0;
+            FY[n] = 0.0;
+            FZ[n] = 0.0;
+        }
+
+        Up = 0.0;
+
 		tbb::parallel_for(
 			0,
 			NumAtom,
@@ -103,7 +111,7 @@ namespace moleculardynamics {
 				}
 			}
 		},
-			tbb::auto_partitioner());
+		tbb::auto_partitioner());
     }
 
     void Ar_moleculardynamics::Move_Atoms()
@@ -125,7 +133,7 @@ namespace moleculardynamics {
         // 温度の計算
         Tc = Uk / (1.5 * static_cast<double>(NumAtom));
 
-        auto s = std::sqrt((Tg + alpha * (Tc - Tg)) / Tc);
+        auto const s = std::sqrt((Tg + alpha * (Tc - Tg)) / Tc);
 		
         switch (MD_iter) {
         case 1:
@@ -177,9 +185,9 @@ namespace moleculardynamics {
 				Y_[n] += s * (Y_[n] - Y1[n]) + FY[n] * dt2;
 				Z_[n] += s * (Z_[n] - Z1[n]) + FZ[n] * dt2;
 //#elif NVE
-//				X_[n] = 2.0 * X_[n] - X1[n] + FX[n] * dt2;
-//				Y_[n] = 2.0 * Y_[n] - Y1[n] + FY[n] * dt2;
-//				Z_[n] = 2.0 * Z_[n] - Z1[n] + FZ[n] * dt2;
+				//X_[n] = 2.0 * X_[n] - X1[n] + FX[n] * dt2;
+				//Y_[n] = 2.0 * Y_[n] - Y1[n] + FY[n] * dt2;
+				//Z_[n] = 2.0 * Z_[n] - Z1[n] + FZ[n] * dt2;
 //#endif
 				VX[n] = 0.5 * (X_[n] - X1[n]) / dt;
 				VY[n] = 0.5 * (Y_[n] - Y1[n]) / dt;
@@ -342,5 +350,4 @@ namespace moleculardynamics {
 	}
 
 	// #endregion privateメンバ関数
-
 }
