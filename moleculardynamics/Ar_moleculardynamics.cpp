@@ -203,7 +203,11 @@ namespace moleculardynamics {
 
         // consider the periodic boundary condination
         // セルの外側に出たら座標をセル内に戻す
-        for (auto n = 0; n < NumAtom; n++) {
+        tbb::parallel_for(
+            0,
+            NumAtom,
+            1,
+            [this](std::int32_t n) {
             if (X_[n] > lat) {
                 X_[n] -= lat;
                 X1[n] -= lat;
@@ -228,7 +232,8 @@ namespace moleculardynamics {
                 Z_[n] += lat;
                 Z1[n] += lat;
             }
-        }
+        },
+            tbb::auto_partitioner());
 
         // 繰り返し回数と時間を増加
         t = static_cast<double>(MD_iter)* dt;
