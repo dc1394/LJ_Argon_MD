@@ -8,9 +8,9 @@
 #include "DXUTcamera.h"
 #include "moleculardynamics/Ar_moleculardynamics.h"
 #include "utility/utility.h"
-#include <array>                // for std::array
-#include <memory>               // for std::unique_ptr
-#include <vector>               // std::vector
+#include <array>									// for std::array
+#include <memory>									// for std::unique_ptr
+#include <vector>									// for std::vector
 
 //! A global variable (constant).
 /*!
@@ -126,7 +126,7 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
     }
 
     auto const size = pmeshvec.size();
-    for (auto i = 0; i < size; i++) {
+    for (auto i = 0U; i < size; i++) {
         g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[1]));
 
         D3DXMATRIX  World;
@@ -288,8 +288,8 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
     utility::v_return(pd3dDevice->CreateBuffer(&bd, &InitData, &pIndexBuffertmp));
 	pIndexBuffer.reset(pIndexBuffertmp);
 	
-    D3DXVECTOR3 vEye(0.0f, 4.0f, -4.0f);
-    D3DXVECTOR3 vLook(0.0f, 0.0f, 0.0f);
+    D3DXVECTOR3 vEye(15.0f, 15.0f, 15.0f);
+	D3DXVECTOR3 vLook(0.0f, 0.0f, 0.0f);
     D3DXVECTOR3 const Up(0.0f, 1.0f, 0.0f);
     D3DXMatrixLookAtLH(&g_View, &vEye, &vLook, &Up);
 
