@@ -229,7 +229,7 @@ namespace moleculardynamics {
 		/*!
 			与える温度Tgiven
 		*/
-        double Tg = 100.0;
+        double Tg = 0.5;
 
 		//! A private member variable.
 		/*!

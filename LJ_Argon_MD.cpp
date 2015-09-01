@@ -245,18 +245,20 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
         pmesh.reset(pmeshtmp);
     }
 
+	auto const pos = boost::numeric_cast<float>(*boost::max_element(armd.X())) * 1.1f;
+
     // Create vertex buffer
     std::array<SimpleVertex, NUMVERTEXBUFFER> const vertices =
     {
-        D3DXVECTOR3(-1.0f, 1.0f, -1.0f),
-        D3DXVECTOR3(1.0f, 1.0f, -1.0f),
-        D3DXVECTOR3(1.0f, 1.0f, 1.0f), 
-        D3DXVECTOR3(-1.0f, 1.0f, 1.0f),
+        D3DXVECTOR3(-pos, pos, -pos),
+        D3DXVECTOR3(pos, pos, -pos),
+        D3DXVECTOR3(pos, pos, pos), 
+        D3DXVECTOR3(-pos, pos, pos),
 
-        D3DXVECTOR3(-1.0f, -1.0f, -1.0f), 
-        D3DXVECTOR3(1.0f, -1.0f, -1.0f),
-        D3DXVECTOR3(1.0f, -1.0f, 1.0f),
-        D3DXVECTOR3(-1.0f, -1.0f, 1.0f),
+        D3DXVECTOR3(-pos, -pos, -pos), 
+        D3DXVECTOR3(pos, -pos, -pos),
+        D3DXVECTOR3(pos, -pos, pos),
+        D3DXVECTOR3(-pos, -pos, pos),
     };
 
     bd.Usage = D3D10_USAGE_DEFAULT;
@@ -297,7 +299,7 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
     utility::v_return(pd3dDevice->CreateBuffer(&bd, &InitData, &pIndexBuffertmp));
 	pIndexBuffer.reset(pIndexBuffertmp);
 	
-    D3DXVECTOR3 vEye(0.0f, 5.0f, 10.0f);
+    D3DXVECTOR3 vEye(0.0f, 10.0f, 10.0f);
 	D3DXVECTOR3 vLook(0.0f, 0.0f, 0.0f);
     D3DXVECTOR3 const Up(0.0f, 1.0f, 0.0f);
     D3DXMatrixLookAtLH(&g_View, &vEye, &vLook, &Up);
