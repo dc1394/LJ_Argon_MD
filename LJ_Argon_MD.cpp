@@ -11,6 +11,8 @@
 #include <array>									// for std::array
 #include <memory>									// for std::unique_ptr
 #include <vector>									// for std::vector
+#include <boost/cast.hpp>							// for boost::numeric_cast
+#include <boost/range/algorithm/max_element.hpp>	// for boost::max_element
 
 //! A global variable (constant).
 /*!
@@ -101,7 +103,7 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
     g_pWorldVariable->SetMatrix(reinterpret_cast<float *>(const_cast<D3DXMATRIX *>(&(*g_Camera.GetWorldMatrix()))));
     g_pViewVariable->SetMatrix(reinterpret_cast<float *>(const_cast<D3DXMATRIX *>(&(*g_Camera.GetViewMatrix()))));
     g_pProjectionVariable->SetMatrix(reinterpret_cast<float *>(const_cast<D3DXMATRIX *>(&(*g_Camera.GetProjMatrix()))));
-    
+
     D3D10_TECHNIQUE_DESC techDesc;
     g_pRender->GetDesc(&techDesc);
 
@@ -126,15 +128,22 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
     }
 
     auto const size = pmeshvec.size();
+	auto const origin = boost::numeric_cast<float>(*boost::max_element(armd.X())) / 2.0f;
+	
     for (auto i = 0U; i < size; i++) {
         g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[1]));
 
-        D3DXMATRIX  World;
-        D3DXMatrixTranslation(&World, armd.X()[i], armd.Y()[i], armd.Z()[i]);
+        D3DXMATRIX World;
+        D3DXMatrixTranslation(
+			&World,
+			boost::numeric_cast<float>(armd.X()[i]) - origin,
+			boost::numeric_cast<float>(armd.Y()[i]) - origin,
+			boost::numeric_cast<float>(armd.Z()[i]) - origin);
         D3DXMatrixMultiply(&World, &(*g_Camera.GetWorldMatrix()), &World);
 
-        // Update variables
-        g_pWorldVariable->SetMatrix(World);
+		// Update variables
+		auto mWorld = World * (*g_Camera.GetWorldMatrix());
+		g_pWorldVariable->SetMatrix(reinterpret_cast<float *>(&mWorld));
 
         UINT NumSubsets;
         pmeshvec[i]->GetAttributeTable(nullptr, &NumSubsets);
@@ -288,7 +297,7 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
     utility::v_return(pd3dDevice->CreateBuffer(&bd, &InitData, &pIndexBuffertmp));
 	pIndexBuffer.reset(pIndexBuffertmp);
 	
-    D3DXVECTOR3 vEye(15.0f, 15.0f, 15.0f);
+    D3DXVECTOR3 vEye(0.0f, 5.0f, 10.0f);
 	D3DXVECTOR3 vLook(0.0f, 0.0f, 0.0f);
     D3DXVECTOR3 const Up(0.0f, 1.0f, 0.0f);
     D3DXMatrixLookAtLH(&g_View, &vEye, &vLook, &Up);
