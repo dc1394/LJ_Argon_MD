@@ -1,66 +1,120 @@
-/*******************************************/
-/*  Teapot �� ArcBall �ő���      �O�c ��  */
-/*  World, View, Projection, Color         */
-/*******************************************/
+﻿/*! \file LJ_Argon_MD.cpp
+    \brief 分子動力学シミュレーションを描画する
+
+    Copyright ©  2015 @dc1394 All Rights Reserved.
+    This software is released under the BSD 2-Clause License.
+*/
+
 #include "DXUT.h"
 #include "SDKmisc.h"
-#include "DXUTShapes.h"
 #include "DXUTcamera.h"
+#include "DXUTgui.h"
+#include "DXUTsettingsDlg.h"
+#include "DXUTShapes.h"
 #include "moleculardynamics/Ar_moleculardynamics.h"
 #include "utility/utility.h"
 #include <array>									// for std::array
 #include <memory>									// for std::unique_ptr
 #include <vector>									// for std::vector
+#include <boost/assert.hpp>                         // for BOOST_ASSERT
 #include <boost/cast.hpp>							// for boost::numeric_cast
 #include <boost/range/algorithm/max_element.hpp>	// for boost::max_element
 
 //! A global variable (constant).
 /*!
-    �C���f�b�N�X�o�b�t�@�̌�
+    インデックスバッファの個数
 */
 static auto const NUMINDEXBUFFER = 16U;
 
 //! A global variable (constant).
 /*!
-    ���_�o�b�t�@�̌�
+    頂点バッファの個数
 */
 static auto const NUMVERTEXBUFFER = 8U;
 
+//! A global variable (constant).
+/*!
+    頂点バッファの個数
+*/
+static auto const TINY = 1.0E-30f;
+
+//! A global variable (constant).
+/*!
+    画面サイズ（高さ）
+*/
+static auto const WINDOWHEIGHT = 960;
+
+//! A global variable (constant).
+/*!
+    画面サイズ（幅）
+*/
+static auto const WINDOWWIDTH = 1280;
+
 //! A global variable.
 /*!
-    �o�b�t�@�[ ���\�[�X
+    バッファー リソース
 */
 D3D10_BUFFER_DESC bd;
 
 //! A global variable.
 /*!
-    ���b�V���ւ̃X�}�[�g�|�C���^���i�[���ꂽ�ϒ��z��
+    Font for drawing text
 */
-std::vector<std::unique_ptr<ID3DX10Mesh, utility::Safe_Release<ID3DX10Mesh>>> pmeshvec;
+std::unique_ptr<ID3DX10Font, utility::Safe_Release<ID3DX10Font>> font;
 
 //! A global variable.
 /*!
-	�G�t�F�N�g���V�F�[�_�v���O������ǂ܂���Ƃ���
+    ブレンディング・ステート
+*/
+std::unique_ptr<ID3D10BlendState, utility::Safe_Release<ID3D10BlendState>> pBlendStateNoBlend;
+
+//! A global variable.
+/*!
+	エフェクト＝シェーダプログラムを読ませるところ
 */
 std::unique_ptr<ID3D10Effect, utility::Safe_Release<ID3D10Effect>> pEffect;
 
 //! A global variable.
 /*!
-	�C���f�b�N�X�o�b�t�@
+	インデックスバッファ
 */
 std::unique_ptr<ID3D10Buffer, utility::Safe_Release<ID3D10Buffer>> pIndexBuffer;
 
 //! A global variable.
 /*!
-	���̓��C�A�E�g �C���^�[�t�F�C�X
+	入力レイアウト インターフェイス
 */
 std::unique_ptr<ID3D10InputLayout, utility::Safe_Release<ID3D10InputLayout>> pInputLayout;
 
 //! A global variable.
 /*!
-	���_�o�b�t�@
+    メッシュへのスマートポインタが格納された可変長配列
+*/
+std::vector<std::unique_ptr<ID3DX10Mesh, utility::Safe_Release<ID3DX10Mesh>>> pmeshvec;
+
+//! A global variable.
+/*!
+	頂点バッファ
 */
 std::unique_ptr<ID3D10Buffer, utility::Safe_Release<ID3D10Buffer>> pVertexBuffer;
+
+//! A global variable.
+/*!
+    Sprite for batching text drawing
+*/
+std::unique_ptr<ID3DX10Sprite, utility::Safe_Release<ID3DX10Sprite>> sprite;
+
+//! A global variable.
+/*!
+    テキスト表示用
+*/
+std::unique_ptr<CDXUTTextHelper, utility::Safe_Delete<CDXUTTextHelper>> txthelper;
+
+//! A global variable.
+/*!
+    カメラ
+*/
+CModelViewerCamera          g_Camera;
 
 ID3D10EffectTechnique*      g_pRender = nullptr;
 ID3D10EffectMatrixVariable* g_pWorldVariable = nullptr;
@@ -74,9 +128,59 @@ D3DXVECTOR4 g_Colors[2] =
     D3DXVECTOR4( 1.0f, 1.0f, 1.0f, 1.0f ),
     D3DXVECTOR4( 1.0f, 0.3f, 0.3f, 1.0f ),
 };
-CModelViewerCamera          g_Camera;
+
+CDXUTDialogResourceManager          g_DialogResourceManager;    // manager for shared resources of dialogs
+CD3DSettingsDlg                     g_D3DSettingsDlg;           // Device settings dialog
+CDXUTDialog                         g_HUD;                      // manages the 3D UI
 
 moleculardynamics::Ar_moleculardynamics armd;
+
+//--------------------------------------------------------------------------------------
+// UI control IDs
+//--------------------------------------------------------------------------------------
+#define IDC_TOGGLEFULLSCREEN    1
+#define IDC_CHANGEDEVICE        2
+#define IDC_TOGGLEROTATION      3
+#define IDC_REDRAW              4
+#define IDC_READDATA            5
+#define IDC_COMBOBOX            6
+#define IDC_RADIOA              7
+#define IDC_RADIOB              8
+#define IDC_OUTPUT              9
+#define IDC_SLIDER				10
+
+void CALLBACK OnGUIEvent(UINT nEvent, int nControlID, CDXUTControl* pControl, void* pUserContext);
+
+//! A function.
+/*!
+    画面の左上に情報を表示する
+*/
+void RenderText(ID3D10Device* pd3dDevice, double fTime);
+
+//! A function.
+/*!
+    UIを配置する
+*/
+void SetUI();
+
+//--------------------------------------------------------------------------------------
+// Initialize the app 
+//--------------------------------------------------------------------------------------
+void InitApp()
+{
+    g_D3DSettingsDlg.Init(&g_DialogResourceManager);
+    g_HUD.Init(&g_DialogResourceManager);
+
+    g_HUD.SetCallback(OnGUIEvent);
+
+    SetUI();
+}
+
+//! A function.
+/*!
+    UIを配置する
+*/
+void SetUI();
 
 //--------------------------------------------------------------------------------------
 // Structures
@@ -91,71 +195,88 @@ struct SimpleVertex
 //--------------------------------------------------------------------------------------
 void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float fElapsedTime, void* pUserContext )
 {
-    armd.Calc_Forces();
-    armd.Move_Atoms();
-
-    // Clear render target and the depth stencil 
-    std::array<float, 4> const ClearColor = { 0.176f, 0.196f, 0.667f, 0.0f };
-    pd3dDevice->ClearRenderTargetView(DXUTGetD3D10RenderTargetView(), ClearColor.data());
-    pd3dDevice->ClearDepthStencilView(DXUTGetD3D10DepthStencilView(), D3D10_CLEAR_DEPTH, 1.0, 0);
-    
-    // Update variables
-    g_pWorldVariable->SetMatrix(reinterpret_cast<float *>(const_cast<D3DXMATRIX *>(&(*g_Camera.GetWorldMatrix()))));
-    g_pViewVariable->SetMatrix(reinterpret_cast<float *>(const_cast<D3DXMATRIX *>(&(*g_Camera.GetViewMatrix()))));
-    g_pProjectionVariable->SetMatrix(reinterpret_cast<float *>(const_cast<D3DXMATRIX *>(&(*g_Camera.GetProjMatrix()))));
-
-    D3D10_TECHNIQUE_DESC techDesc;
-    g_pRender->GetDesc(&techDesc);
-
-    g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[0]));
-
-    // Set vertex buffer
-    auto const stride = sizeof(SimpleVertex);
-    auto const offset = 0U;
-    auto const pVertexBuffertmp = pVertexBuffer.get();
-    pd3dDevice->IASetVertexBuffers(0, 1, &pVertexBuffertmp, &stride, &offset);
-
-    // Set index buffer
-    pd3dDevice->IASetIndexBuffer(pIndexBuffer.get(), DXGI_FORMAT_R32_UINT, 0);
-
-    // Set primitive topology
-    pd3dDevice->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_LINESTRIP);
-
-    for (auto p = 0U; p < techDesc.Passes; p++)
+    if (g_D3DSettingsDlg.IsActive())
     {
-        g_pRender->GetPassByIndex(p)->Apply(0);
-        pd3dDevice->DrawIndexed(NUMINDEXBUFFER, 0, 0);
+        std::array<float, 4> const ClearColor = { 0.176f, 0.196f, 0.667f, 1.0f };
+        auto pRTV = DXUTGetD3D10RenderTargetView();
+        pd3dDevice->ClearRenderTargetView(pRTV, ClearColor.data());
+
+        g_D3DSettingsDlg.OnRender(fElapsedTime);
+        return;
     }
+    else
+    {
+        armd.Calc_Forces();
+        armd.Move_Atoms();
 
-    auto const size = pmeshvec.size();
-	auto const origin = boost::numeric_cast<float>(*boost::max_element(armd.X())) / 2.0f;
-	
-    for (auto i = 0U; i < size; i++) {
-        g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[1]));
+        // Clear render target and the depth stencil 
+        std::array<float, 4> const ClearColor = { 0.176f, 0.196f, 0.667f, 1.0f };
+        pd3dDevice->ClearRenderTargetView(DXUTGetD3D10RenderTargetView(), ClearColor.data());
+        pd3dDevice->ClearDepthStencilView(DXUTGetD3D10DepthStencilView(), D3D10_CLEAR_DEPTH, 1.0, 0);
 
-        D3DXMATRIX World;
-        D3DXMatrixTranslation(
-			&World,
-			boost::numeric_cast<float>(armd.X()[i]) - origin,
-			boost::numeric_cast<float>(armd.Y()[i]) - origin,
-			boost::numeric_cast<float>(armd.Z()[i]) - origin);
-        D3DXMatrixMultiply(&World, &(*g_Camera.GetWorldMatrix()), &World);
+        // Update variables
+        g_pWorldVariable->SetMatrix(reinterpret_cast<float *>(const_cast<D3DXMATRIX *>(&(*g_Camera.GetWorldMatrix()))));
+        g_pViewVariable->SetMatrix(reinterpret_cast<float *>(const_cast<D3DXMATRIX *>(&(*g_Camera.GetViewMatrix()))));
+        g_pProjectionVariable->SetMatrix(reinterpret_cast<float *>(const_cast<D3DXMATRIX *>(&(*g_Camera.GetProjMatrix()))));
 
-		// Update variables
-		auto mWorld = World * (*g_Camera.GetWorldMatrix());
-		g_pWorldVariable->SetMatrix(reinterpret_cast<float *>(&mWorld));
+        D3D10_TECHNIQUE_DESC techDesc;
+        g_pRender->GetDesc(&techDesc);
 
-        UINT NumSubsets;
-        pmeshvec[i]->GetAttributeTable(nullptr, &NumSubsets);
+        g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[0]));
+
+        // Set vertex buffer
+        auto const stride = sizeof(SimpleVertex);
+        auto const offset = 0U;
+        auto const pVertexBuffertmp = pVertexBuffer.get();
+        pd3dDevice->IASetVertexBuffers(0, 1, &pVertexBuffertmp, &stride, &offset);
+
+        // Set index buffer
+        pd3dDevice->IASetIndexBuffer(pIndexBuffer.get(), DXGI_FORMAT_R32_UINT, 0);
+
+        // Set primitive topology
+        pd3dDevice->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_LINESTRIP);
 
         for (auto p = 0U; p < techDesc.Passes; p++)
         {
             g_pRender->GetPassByIndex(p)->Apply(0);
-            for (auto s = 0U; s < NumSubsets; s++)
+            pd3dDevice->DrawIndexed(NUMINDEXBUFFER, 0, 0);
+        }
+
+        auto const size = pmeshvec.size();
+        static auto const origin = boost::numeric_cast<float>(*boost::max_element(armd.X())) / 2.0f;
+
+        for (auto i = 0U; i < size; i++) {
+            g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[1]));
+
+            D3DXMATRIX World;
+            D3DXMatrixTranslation(
+                &World,
+                boost::numeric_cast<float>(armd.X()[i]) - origin,
+                boost::numeric_cast<float>(armd.Y()[i]) - origin,
+                boost::numeric_cast<float>(armd.Z()[i]) - origin);
+            D3DXMatrixMultiply(&World, &(*g_Camera.GetWorldMatrix()), &World);
+
+            // Update variables
+            auto mWorld = World * (*g_Camera.GetWorldMatrix());
+            g_pWorldVariable->SetMatrix(reinterpret_cast<float *>(&mWorld));
+
+            UINT NumSubsets;
+            pmeshvec[i]->GetAttributeTable(nullptr, &NumSubsets);
+
+            for (auto p = 0U; p < techDesc.Passes; p++)
             {
-                pmeshvec[i]->DrawSubset(s);
+                g_pRender->GetPassByIndex(p)->Apply(0);
+                for (auto s = 0U; s < NumSubsets; s++)
+                {
+                    pmeshvec[i]->DrawSubset(s);
+                }
             }
         }
+
+        DXUT_BeginPerfEvent(DXUT_PERFEVENTCOLOR, L"HUD / Stats");
+        g_HUD.OnRender(fElapsedTime);
+        RenderText(pd3dDevice, fTime);
+        DXUT_EndPerfEvent();
     }
 }
 
@@ -182,6 +303,20 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
                                       void* pUserContext )
 {
     HRESULT hr = S_OK;
+
+    V_RETURN(g_DialogResourceManager.OnD3D10CreateDevice(pd3dDevice));
+    V_RETURN(g_D3DSettingsDlg.OnD3D10CreateDevice(pd3dDevice));
+
+    ID3DX10Font * fonttemp;
+    V_RETURN(D3DX10CreateFont(pd3dDevice, 15, 0, FW_BOLD, 1, FALSE, DEFAULT_CHARSET,
+        OUT_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE,
+        L"Arial", &fonttemp));
+    font.reset(fonttemp);
+
+    ID3DX10Sprite * spritetmp;
+    V_RETURN(D3DX10CreateSprite(pd3dDevice, 512, &spritetmp));
+    sprite.reset(spritetmp);
+    txthelper.reset(new CDXUTTextHelper(nullptr, nullptr, font.get(), sprite.get(), 15));
 
     // Find the D3DX effect file
     std::array<WCHAR, MAX_PATH> str;
@@ -237,6 +372,15 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
 	pInputLayout.reset(pInputLayouttmp);
 
 	pd3dDevice->IASetInputLayout(pInputLayout.get());
+    
+    D3D10_BLEND_DESC BlendState;
+    ZeroMemory(&BlendState, sizeof(D3D10_BLEND_DESC));
+    BlendState.BlendEnable[0] = FALSE;
+    BlendState.RenderTargetWriteMask[0] = D3D10_COLOR_WRITE_ENABLE_ALL;
+
+    ID3D10BlendState * pBlendStateNoBlendtmp = nullptr;
+    pd3dDevice->CreateBlendState(&BlendState, &pBlendStateNoBlendtmp);
+    pBlendStateNoBlend.reset(pBlendStateNoBlendtmp);
 
     pmeshvec.resize(armd.X().size());
     for (auto & pmesh : pmeshvec) {
@@ -245,7 +389,11 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
         pmesh.reset(pmeshtmp);
     }
 
-	auto const pos = boost::numeric_cast<float>(*boost::max_element(armd.X())) * 1.1f;
+    auto boundarylen = boost::numeric_cast<float>(*boost::max_element(armd.X()));
+    BOOST_ASSERT(std::fabs(boost::numeric_cast<float>(*boost::max_element(armd.Y())) - boundarylen) < TINY);
+    BOOST_ASSERT(std::fabs(boost::numeric_cast<float>(*boost::max_element(armd.Z())) - boundarylen) < TINY);
+
+	auto const pos = boundarylen * 1.1f;
 
     // Create vertex buffer
     std::array<SimpleVertex, NUMVERTEXBUFFER> const vertices =
@@ -317,11 +465,18 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
 //--------------------------------------------------------------------------------------
 HRESULT CALLBACK OnD3D10ResizedSwapChain( ID3D10Device* pd3dDevice, IDXGISwapChain *pSwapChain, const DXGI_SURFACE_DESC* pBackBufferSurfaceDesc, void* pUserContext )
 {
+    HRESULT hr;
+
+    V_RETURN(g_DialogResourceManager.OnD3D10ResizedSwapChain(pd3dDevice, pBackBufferSurfaceDesc));
+    V_RETURN(g_D3DSettingsDlg.OnD3D10ResizedSwapChain(pd3dDevice, pBackBufferSurfaceDesc));
+
+    g_HUD.SetLocation(pBackBufferSurfaceDesc->Width - 170, 0);
+    g_HUD.SetSize(170, 170);
+    
     auto const fAspectRatio = static_cast<float>(pBackBufferSurfaceDesc->Width) /
         static_cast<float>(pBackBufferSurfaceDesc->Height);
     g_Camera.SetProjParams(D3DX_PI / 4, fAspectRatio, 0.1f, 1000.0f);
     g_Camera.SetWindow(pBackBufferSurfaceDesc->Width, pBackBufferSurfaceDesc->Height);
-
     return S_OK;
 }
 
@@ -334,10 +489,76 @@ void CALLBACK OnFrameMove( double fTime, float fElapsedTime, void* pUserContext 
 }
 
 //--------------------------------------------------------------------------------------
+// Handles the GUI events
+//--------------------------------------------------------------------------------------
+void CALLBACK OnGUIEvent(UINT nEvent, int nControlID, CDXUTControl* pControl, void* pUserContext)
+{
+    switch (nControlID)
+    {
+    case IDC_TOGGLEFULLSCREEN:
+        DXUTToggleFullScreen();
+        break;
+
+    case IDC_CHANGEDEVICE:
+        g_D3DSettingsDlg.SetActive(!g_D3DSettingsDlg.IsActive());
+        break;
+
+    case IDC_TOGGLEROTATION:
+        //ROT_FLAG = !ROT_FLAG;
+        break;
+
+    case IDC_REDRAW:
+        //RedrawFlagTrue();
+        break;
+
+   /* case IDC_READDATA:
+        StopDraw();
+        ReadData();
+        SetUI();
+        scene->Pgd = pgd;
+        scene->Thread_end = false;
+        scene->Redraw = true;
+        first = true;
+        ::SetWindowText(DXUTGetHWND(), CreateWindowTitle().c_str());
+        break;
+
+    case IDC_COMBOBOX:
+    {
+        auto const pItem = (static_cast<CDXUTComboBox *>(pControl))->GetSelectedItem();
+        if (pItem)
+        {
+            drawdata = reinterpret_cast<std::uint32_t>(pItem->pData);
+            RedrawFlagTrue();
+        }
+        break;
+    }
+
+    case IDC_RADIOA:
+        reim = TDXScene::Re_Im_type::REAL;
+        RedrawFlagTrue();
+        break;
+
+    case IDC_RADIOB:
+        reim = TDXScene::Re_Im_type::IMAGINARY;
+        RedrawFlagTrue();
+        break;
+
+    case IDC_SLIDER:
+        scene->Vertexsize(static_cast<std::vector<TDXScene::SimpleVertex2>::size_type>((reinterpret_cast<CDXUTSlider*>(pControl))->GetValue()));
+        RedrawFlagTrue();
+        break;*/
+
+    default:
+        break;
+    }
+}
+
+//--------------------------------------------------------------------------------------
 // Release D3D10 resources created in OnD3D10ResizedSwapChain 
 //--------------------------------------------------------------------------------------
 void CALLBACK OnD3D10ReleasingSwapChain( void* pUserContext )
 {
+    g_DialogResourceManager.OnD3D10ReleasingSwapChain();
 }
 
 //--------------------------------------------------------------------------------------
@@ -345,14 +566,22 @@ void CALLBACK OnD3D10ReleasingSwapChain( void* pUserContext )
 //--------------------------------------------------------------------------------------
 void CALLBACK OnD3D10DestroyDevice( void* pUserContext )
 {
+    font.reset();
+    pBlendStateNoBlend.reset();
     pEffect.reset();
 	pInputLayout.reset();
     pIndexBuffer.reset();
     pVertexBuffer.reset();
+    sprite.reset();
+    txthelper.reset();
 
     for (auto & pmesh : pmeshvec) {
         pmesh.reset();
     }
+
+    g_DialogResourceManager.OnD3D10DestroyDevice();
+    g_D3DSettingsDlg.OnD3D10DestroyDevice();
+    DXUTGetGlobalResourceCache().OnDestroyDevice();
 }
 
 //--------------------------------------------------------------------------------------
@@ -361,6 +590,23 @@ void CALLBACK OnD3D10DestroyDevice( void* pUserContext )
 LRESULT CALLBACK MsgProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, 
                           bool* pbNoFurtherProcessing, void* pUserContext )
 {
+    // Pass messages to dialog resource manager calls so GUI state is updated correctly
+    *pbNoFurtherProcessing = g_DialogResourceManager.MsgProc(hWnd, uMsg, wParam, lParam);
+    if (*pbNoFurtherProcessing)
+        return 0;
+
+    // Pass messages to settings dialog if its active
+    if (g_D3DSettingsDlg.IsActive())
+    {
+        g_D3DSettingsDlg.MsgProc(hWnd, uMsg, wParam, lParam);
+        return 0;
+    }
+
+    // Give the dialogs a chance to handle the message first
+    *pbNoFurtherProcessing = g_HUD.MsgProc(hWnd, uMsg, wParam, lParam);
+    if (*pbNoFurtherProcessing)
+        return 0;
+
     g_Camera.HandleMessages(hWnd, uMsg, wParam, lParam);
 
     return 0;
@@ -388,6 +634,106 @@ void CALLBACK OnMouse( bool bLeftButtonDown, bool bRightButtonDown, bool bMiddle
 bool CALLBACK OnDeviceRemoved( void* pUserContext )
 {
     return true;
+}
+
+void SetUI()
+{
+    g_HUD.RemoveAllControls();
+
+    std::int32_t iY = 10;
+
+    g_HUD.AddButton(IDC_TOGGLEFULLSCREEN, L"Toggle full screen", 35, iY, 125, 22);
+    g_HUD.AddButton(IDC_CHANGEDEVICE, L"Change device (F2)", 35, iY += 24, 125, 22, VK_F2);
+    g_HUD.AddButton(IDC_TOGGLEROTATION, L"Toggle Rotaion Animation", 35, iY += 24, 125, 22);
+
+    g_HUD.AddButton(IDC_REDRAW, L"再描画", 35, iY += 34, 125, 22);
+    g_HUD.AddButton(IDC_READDATA, L"新規ファイル読み込み", 35, iY += 24, 125, 22);
+
+    // Combobox
+    //CDXUTComboBox* pCombo;
+    //g_HUD.AddComboBox(IDC_COMBOBOX, 35, iY += 34, 125, 22, L'O', false, &pCombo);
+    //if (pCombo)
+    //{
+    //    pCombo->SetDropHeight(100);
+    //    pCombo->RemoveAllItems();
+    //    BOOST_ASSERT(pgd->N > static_cast<std::int32_t>(pgd->L));
+    //    auto orbital(std::to_wstring(pgd->N));
+    //    switch (pgd->L) {
+    //    case 0:
+    //    {
+    //        orbital += L's';
+    //        pCombo->AddItem(orbital.c_str(), reinterpret_cast<LPVOID>(0x11111111));
+    //    }
+    //    break;
+
+    //    case 1:
+    //    {
+    //        pCombo->AddItem((orbital + L"px").c_str(), reinterpret_cast<LPVOID>(0x11111111));
+    //        pCombo->AddItem((orbital + L"py").c_str(), reinterpret_cast<LPVOID>(0x12121212));
+    //        pCombo->AddItem((orbital + L"pz").c_str(), reinterpret_cast<LPVOID>(0x13131313));
+    //    }
+    //    break;
+
+    //    case 2:
+    //    {
+    //        pCombo->AddItem((orbital + L"dxy").c_str(), reinterpret_cast<LPVOID>(0x11111111));
+    //        pCombo->AddItem((orbital + L"dyz").c_str(), reinterpret_cast<LPVOID>(0x12121212));
+    //        pCombo->AddItem((orbital + L"dzx").c_str(), reinterpret_cast<LPVOID>(0x13131313));
+    //        pCombo->AddItem((orbital + L"dx^2-y^2").c_str(), reinterpret_cast<LPVOID>(0x14141414));
+    //        pCombo->AddItem((orbital + L"dz^2").c_str(), reinterpret_cast<LPVOID>(0x15151515));
+    //    }
+    //    break;
+
+    //    case 3:
+    //    {
+    //        pCombo->AddItem((orbital + L"fxz^2").c_str(), reinterpret_cast<LPVOID>(0x11111111));
+    //        pCombo->AddItem((orbital + L"fyz^2").c_str(), reinterpret_cast<LPVOID>(0x12121212));
+    //        pCombo->AddItem((orbital + L"fz(x^2-y^2)").c_str(), reinterpret_cast<LPVOID>(0x13131313));
+    //        pCombo->AddItem((orbital + L"fxyz").c_str(), reinterpret_cast<LPVOID>(0x14141414));
+    //        pCombo->AddItem((orbital + L"fx(x^2-3y^2)").c_str(), reinterpret_cast<LPVOID>(0x15151515));
+    //        pCombo->AddItem((orbital + L"fy(3x^2-y^2)").c_str(), reinterpret_cast<LPVOID>(0x16161616));
+    //        pCombo->AddItem((orbital + L"fz^2").c_str(), reinterpret_cast<LPVOID>(0x17171717));
+    //    }
+    //    break;
+
+    //    default:
+    //        throw std::runtime_error("g以上の軌道には対応していません");
+    //        break;
+    //    }
+
+    //    if (pgd->Rho_wf_type_ == getdata::GetData::Rho_Wf_type::WF) {
+    //        // Radio buttons
+    //        g_HUD.AddRadioButton(IDC_RADIOA, 1, L"実部", 35, iY += 34, 125, 22, true, L'1');
+    //        g_HUD.AddRadioButton(IDC_RADIOB, 1, L"虚部", 35, iY += 28, 125, 22, false, L'2');
+    //    }
+    //}
+
+    //// 角度の調整
+    //g_HUD.AddStatic(IDC_OUTPUT, L"頂点数", 20, iY += 34, 125, 22);
+    //g_HUD.GetStatic(IDC_OUTPUT)->SetTextColor(D3DCOLOR_ARGB(255, 255, 255, 255));
+    //g_HUD.AddSlider(IDC_SLIDER, 35, iY += 24, 125, 22, 0, 1000000, TDXScene::VERTEXSIZE_FIRST);
+}
+
+//--------------------------------------------------------------------------------------
+// Render the help and statistics text
+//--------------------------------------------------------------------------------------
+void RenderText(ID3D10Device* pd3dDevice, double fTime)
+{
+    txthelper->Begin();
+    txthelper->SetInsertionPos(2, 0);
+    txthelper->SetForegroundColor(D3DXCOLOR(1.000f, 0.945f, 0.059f, 1.000f));
+    txthelper->DrawTextLine(DXUTGetFrameStats(DXUTIsVsyncEnabled()));
+    txthelper->DrawTextLine(DXUTGetDeviceStats());
+    //txthelper->DrawTextLine((boost::wformat(L"CPUスレッド数: %d") % cputhread).str().c_str());
+    //txthelper->DrawTextLine((boost::wformat(L"頂点数 = %d") % scene->Vertexsize()).str().c_str());
+    //txthelper->DrawTextLine(str.c_str());
+    txthelper->End();
+    pd3dDevice->IASetInputLayout(pInputLayout.get());
+
+    auto const blendFactor = 0.0f;
+    auto sampleMask = 0xffffffff;
+
+    pd3dDevice->OMSetBlendState(pBlendStateNoBlend.get(), &blendFactor, sampleMask);
 }
 
 //--------------------------------------------------------------------------------------
@@ -418,8 +764,22 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
 
     DXUTInit( true, true, nullptr ); // Parse the command line, show msgboxes on error, no extra command line params
     DXUTSetCursorSettings( true, true ); // Show the cursor and clip it when in full screen
-    DXUTCreateWindow( L"Teapot ArcBall" );
-    DXUTCreateDevice( true, 640, 480 );  
+    
+    InitApp();
+
+    // ウィンドウを生成
+    auto const dispx = ::GetSystemMetrics(SM_CXSCREEN);
+    auto const dispy = ::GetSystemMetrics(SM_CYSCREEN);
+    auto const xpos = (dispx - WINDOWWIDTH) >> 1;
+    auto const ypos = (dispy - WINDOWHEIGHT) >> 1;
+    DXUTCreateWindow(L"アルゴンの古典分子動力学シミュレーション", nullptr, nullptr, nullptr, xpos, ypos);
+    DXUTCreateDevice(true, WINDOWWIDTH, WINDOWHEIGHT);
+
+    // 垂直同期をオフにする
+    auto ds = DXUTGetDeviceSettings();
+    ds.d3d10.SyncInterval = 0;
+    DXUTCreateDeviceFromSettings(&ds);
+
     DXUTMainLoop(); // Enter into the DXUT render loop
 
     return DXUTGetExitCode();
