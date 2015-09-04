@@ -22,6 +22,18 @@
 
 //! A global variable (constant).
 /*!
+	箱の比率
+*/
+static auto const BOXRATIO = 1.1f;
+
+//! A global variable (constant).
+/*!
+	色の比率
+*/
+static auto const COLORRATIO = 0.025f;
+
+//! A global variable (constant).
+/*!
     インデックスバッファの個数
 */
 static auto const NUMINDEXBUFFER = 16U;
@@ -120,25 +132,25 @@ std::unique_ptr<CDXUTTextHelper, utility::Safe_Delete<CDXUTTextHelper>> txthelpe
 /*!
     A model viewing camera
 */
-CModelViewerCamera          g_Camera;
+CModelViewerCamera g_Camera;
 
 //! A global variable.
 /*!
     manager for shared resources of dialogs
 */
-CDXUTDialogResourceManager          g_DialogResourceManager;
+CDXUTDialogResourceManager g_DialogResourceManager;
 
 //! A global variable.
 /*!
     Device settings dialog
 */
-CD3DSettingsDlg                     g_D3DSettingsDlg;
+CD3DSettingsDlg g_D3DSettingsDlg;
 
 //! A global variable.
 /*!
     manages the 3D UI
 */
-CDXUTDialog                         g_HUD;
+CDXUTDialog g_HUD;
 
 //! A global variable.
 /*!
@@ -284,7 +296,8 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
 
         for (auto i = 0U; i < size; i++) {
             auto color = g_Colors[1];
-            color.x = armd.getForce(i);
+			auto const rcolor = COLORRATIO * armd.getForce(i);
+            color.x = rcolor > 1.0f ? 1.0f : rcolor;
             g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&color));
 
             D3DXMATRIX World;
@@ -432,7 +445,7 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
     BOOST_ASSERT(std::fabs(boost::numeric_cast<float>(*boost::max_element(armd.Y())) - boundarylen) < TINY);
     BOOST_ASSERT(std::fabs(boost::numeric_cast<float>(*boost::max_element(armd.Z())) - boundarylen) < TINY);
 
-	auto const pos = boundarylen * 1.1f;
+	auto const pos = boundarylen * BOXRATIO;
 
     // Create vertex buffer
     std::array<SimpleVertex, NUMVERTEXBUFFER> const vertices =

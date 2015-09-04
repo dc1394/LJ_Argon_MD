@@ -39,13 +39,10 @@ namespace moleculardynamics {
 		Z1(Nc * Nc * Nc * 4)
 	{
 		// initalize parameters
-		lat = std::pow(2.0, 2.0 / 3.0) * scale;
 		auto uvol = lat * lat * lat;
 		rho = 4.0 / uvol;
 
         recalc();
-
-		lat *= static_cast<double>(Nc);
 
 		tbb::task_scheduler_init init;
 	}
@@ -115,7 +112,7 @@ namespace moleculardynamics {
 
     float Ar_moleculardynamics::getForce(std::int32_t n) const
     {
-        return 0.05f * static_cast<float>(std::sqrt(norm2(FX[n], FY[n], FZ[n])));
+        return static_cast<float>(std::sqrt(norm2(FX[n], FY[n], FZ[n])));
     }
 
     void Ar_moleculardynamics::Move_Atoms()
@@ -246,8 +243,15 @@ namespace moleculardynamics {
 
     void Ar_moleculardynamics::recalc()
     {
+		t = 0.0;
+		MD_iter = 1;
+
+		lat = std::pow(2.0, 2.0 / 3.0) * scale;
+
         MD_initPos();
         MD_initVel();
+
+		lat *= static_cast<double>(Nc);
     }
 
     // #endregion publicメンバ関数
