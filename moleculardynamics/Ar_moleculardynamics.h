@@ -47,14 +47,24 @@ namespace moleculardynamics {
             原子に働く力を計算する
         */
         void Calc_Forces();
-		
+
+        //! A public member function.
+        /*!
+            n番目の原子に働く力を求める
+        */
+        float getForce(std::int32_t n) const;
+
         //! A public member function.
         /*!
             原子を移動させる
         */
         void Move_Atoms();
 
-        //void Output_Data();
+        //! A public member function.
+        /*!
+            再計算する
+        */
+        void recalc();
 
         // #endregion publicメンバ関数
 
@@ -81,7 +91,7 @@ namespace moleculardynamics {
 			\param z z座標
 			\return ノルムの二乗
 		*/
-		double norm2(double x, double y, double z);
+		double norm2(double x, double y, double z) const;
 
 		// #endregion privateメンバ関数
 

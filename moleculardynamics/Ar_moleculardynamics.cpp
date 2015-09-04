@@ -16,7 +16,7 @@ namespace moleculardynamics {
 	// #region コンストラクタ
 
 	Ar_moleculardynamics::Ar_moleculardynamics()
-		: 
+		:
 		X([this] { return std::cref(X_); }, nullptr),
 		Y([this] { return std::cref(Y_); }, nullptr),
 		Z([this] { return std::cref(Z_); }, nullptr),
@@ -43,8 +43,7 @@ namespace moleculardynamics {
 		auto uvol = lat * lat * lat;
 		rho = 4.0 / uvol;
 
-		MD_initPos();
-		MD_initVel();
+        recalc();
 
 		lat *= static_cast<double>(Nc);
 
@@ -112,6 +111,11 @@ namespace moleculardynamics {
 			}
 		},
 		tbb::auto_partitioner());
+    }
+
+    float Ar_moleculardynamics::getForce(std::int32_t n) const
+    {
+        return 0.05f * static_cast<float>(std::sqrt(norm2(FX[n], FY[n], FZ[n])));
     }
 
     void Ar_moleculardynamics::Move_Atoms()
@@ -240,6 +244,12 @@ namespace moleculardynamics {
         MD_iter++;
     }
 
+    void Ar_moleculardynamics::recalc()
+    {
+        MD_initPos();
+        MD_initVel();
+    }
+
     // #endregion publicメンバ関数
 
 	// #region privateメンバ関数
@@ -349,7 +359,7 @@ namespace moleculardynamics {
 		}
 	}
 
-	double Ar_moleculardynamics::norm2(double x, double y, double z)
+	double Ar_moleculardynamics::norm2(double x, double y, double z) const
 	{
 		return (x * x + y * y + z * z);
 	}

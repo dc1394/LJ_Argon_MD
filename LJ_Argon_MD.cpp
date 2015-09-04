@@ -52,6 +52,12 @@ static auto const WINDOWWIDTH = 1280;
 
 //! A global variable.
 /*!
+    分子動力学シミュレーションのオブジェクト
+*/
+moleculardynamics::Ar_moleculardynamics armd;
+
+//! A global variable.
+/*!
     バッファー リソース
 */
 D3D10_BUFFER_DESC bd;
@@ -112,28 +118,64 @@ std::unique_ptr<CDXUTTextHelper, utility::Safe_Delete<CDXUTTextHelper>> txthelpe
 
 //! A global variable.
 /*!
-    カメラ
+    A model viewing camera
 */
 CModelViewerCamera          g_Camera;
 
-ID3D10EffectTechnique*      g_pRender = nullptr;
-ID3D10EffectMatrixVariable* g_pWorldVariable = nullptr;
-ID3D10EffectMatrixVariable* g_pViewVariable = nullptr;
-ID3D10EffectMatrixVariable* g_pProjectionVariable = nullptr;
+//! A global variable.
+/*!
+    manager for shared resources of dialogs
+*/
+CDXUTDialogResourceManager          g_DialogResourceManager;
+
+//! A global variable.
+/*!
+    Device settings dialog
+*/
+CD3DSettingsDlg                     g_D3DSettingsDlg;
+
+//! A global variable.
+/*!
+    manages the 3D UI
+*/
+CDXUTDialog                         g_HUD;
+
+//! A global variable.
+/*!
+*/
 ID3D10EffectVectorVariable* g_pColorVariable = nullptr;
+
+//! A global variable.
+/*!
+*/
+ID3D10EffectMatrixVariable* g_pProjectionVariable = nullptr;
+
+//! A global variable.
+/*!
+*/
+ID3D10EffectTechnique*      g_pRender = nullptr;
+
+//! A global variable.
+/*!
+*/
+ID3D10EffectMatrixVariable* g_pViewVariable = nullptr;
+
+//! A global variable.
+/*!
+*/
+ID3D10EffectMatrixVariable* g_pWorldVariable = nullptr;
+
+//! A global variable.
+/*!
+    ビュー行列
+*/
 D3DXMATRIX                  g_View;
-D3DXMATRIX                  g_Projection;
+
 D3DXVECTOR4 g_Colors[2] = 
 {
     D3DXVECTOR4( 1.0f, 1.0f, 1.0f, 1.0f ),
-    D3DXVECTOR4( 1.0f, 0.3f, 0.3f, 1.0f ),
+    D3DXVECTOR4( 1.0f, 0.0f, 1.0f, 1.0f ),
 };
-
-CDXUTDialogResourceManager          g_DialogResourceManager;    // manager for shared resources of dialogs
-CD3DSettingsDlg                     g_D3DSettingsDlg;           // Device settings dialog
-CDXUTDialog                         g_HUD;                      // manages the 3D UI
-
-moleculardynamics::Ar_moleculardynamics armd;
 
 //--------------------------------------------------------------------------------------
 // UI control IDs
@@ -141,13 +183,8 @@ moleculardynamics::Ar_moleculardynamics armd;
 #define IDC_TOGGLEFULLSCREEN    1
 #define IDC_CHANGEDEVICE        2
 #define IDC_TOGGLEROTATION      3
-#define IDC_REDRAW              4
-#define IDC_READDATA            5
-#define IDC_COMBOBOX            6
-#define IDC_RADIOA              7
-#define IDC_RADIOB              8
-#define IDC_OUTPUT              9
-#define IDC_SLIDER				10
+#define IDC_RECALC              4
+#define IDC_SLIDER				5
 
 void CALLBACK OnGUIEvent(UINT nEvent, int nControlID, CDXUTControl* pControl, void* pUserContext);
 
@@ -246,7 +283,9 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
         static auto const origin = boost::numeric_cast<float>(*boost::max_element(armd.X())) / 2.0f;
 
         for (auto i = 0U; i < size; i++) {
-            g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[1]));
+            auto color = g_Colors[1];
+            color.x = armd.getForce(i);
+            g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&color));
 
             D3DXMATRIX World;
             D3DXMatrixTranslation(
@@ -507,8 +546,8 @@ void CALLBACK OnGUIEvent(UINT nEvent, int nControlID, CDXUTControl* pControl, vo
         //ROT_FLAG = !ROT_FLAG;
         break;
 
-    case IDC_REDRAW:
-        //RedrawFlagTrue();
+    case IDC_RECALC:
+        armd.recalc();
         break;
 
    /* case IDC_READDATA:
@@ -646,8 +685,7 @@ void SetUI()
     g_HUD.AddButton(IDC_CHANGEDEVICE, L"Change device (F2)", 35, iY += 24, 125, 22, VK_F2);
     g_HUD.AddButton(IDC_TOGGLEROTATION, L"Toggle Rotaion Animation", 35, iY += 24, 125, 22);
 
-    g_HUD.AddButton(IDC_REDRAW, L"再描画", 35, iY += 34, 125, 22);
-    g_HUD.AddButton(IDC_READDATA, L"新規ファイル読み込み", 35, iY += 24, 125, 22);
+    g_HUD.AddButton(IDC_RECALC, L"再計算", 35, iY += 34, 125, 22);
 
     // Combobox
     //CDXUTComboBox* pCombo;
