@@ -70,6 +70,12 @@ moleculardynamics::Ar_moleculardynamics armd;
 
 //! A global variable.
 /*!
+    箱の色
+*/
+D3DXVECTOR4 BoxColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+//! A global variable.
+/*!
     バッファー リソース
 */
 D3D10_BUFFER_DESC bd;
@@ -115,6 +121,12 @@ std::vector<std::unique_ptr<ID3DX10Mesh, utility::Safe_Release<ID3DX10Mesh>>> pm
 	頂点バッファ
 */
 std::unique_ptr<ID3D10Buffer, utility::Safe_Release<ID3D10Buffer>> pVertexBuffer;
+
+//! A global variable.
+/*!
+    球の色
+*/
+D3DXVECTOR4 SphereColor(1.0f, 0.0f, 1.0f, 1.0f);
 
 //! A global variable.
 /*!
@@ -165,7 +177,7 @@ ID3D10EffectMatrixVariable* g_pProjectionVariable = nullptr;
 //! A global variable.
 /*!
 */
-ID3D10EffectTechnique*      g_pRender = nullptr;
+ID3D10EffectTechnique* g_pRender = nullptr;
 
 //! A global variable.
 /*!
@@ -181,13 +193,7 @@ ID3D10EffectMatrixVariable* g_pWorldVariable = nullptr;
 /*!
     ビュー行列
 */
-D3DXMATRIX                  g_View;
-
-D3DXVECTOR4 g_Colors[2] = 
-{
-    D3DXVECTOR4( 1.0f, 1.0f, 1.0f, 1.0f ),
-    D3DXVECTOR4( 1.0f, 0.0f, 1.0f, 1.0f ),
-};
+D3DXMATRIX g_View;
 
 //--------------------------------------------------------------------------------------
 // UI control IDs
@@ -271,7 +277,7 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
         D3D10_TECHNIQUE_DESC techDesc;
         g_pRender->GetDesc(&techDesc);
 
-        g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&g_Colors[0]));
+        g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&BoxColor));
 
         // Set vertex buffer
         auto const stride = sizeof(SimpleVertex);
@@ -295,7 +301,7 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
         static auto const origin = boost::numeric_cast<float>(*boost::max_element(armd.X())) / 2.0f;
 
         for (auto i = 0U; i < size; i++) {
-            auto color = g_Colors[1];
+            auto color = SphereColor;
 			auto const rcolor = COLORRATIO * armd.getForce(i);
             color.x = rcolor > 1.0f ? 1.0f : rcolor;
             g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&color));

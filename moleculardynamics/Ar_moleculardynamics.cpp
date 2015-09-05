@@ -13,6 +13,16 @@
 #include <tbb/task_scheduler_init.h>    // for tbb::task_scheduler_init
 
 namespace moleculardynamics {
+    // #region static private 定数
+
+    double const Ar_moleculardynamics::KB = 1.3806488E-23;
+
+    double const Ar_moleculardynamics::SIGMA = 3.405;
+
+    double const Ar_moleculardynamics::YPSILON = 1.6540172624E-21;
+
+    // #endregion static private 定数
+
 	// #region コンストラクタ
 
 	Ar_moleculardynamics::Ar_moleculardynamics()
@@ -116,6 +126,16 @@ namespace moleculardynamics {
         return static_cast<float>(std::sqrt(norm2(FX[n], FY[n], FZ[n])));
     }
 
+    float Ar_moleculardynamics::getTcalc() const
+    {
+        return static_cast<float>(Tc_ * Ar_moleculardynamics::KB / Ar_moleculardynamics::YPSILON);
+    }
+
+    float Ar_moleculardynamics::getTgiven() const
+    {
+        return static_cast<float>(Tg_ * Ar_moleculardynamics::KB / Ar_moleculardynamics::YPSILON);
+    }
+
     void Ar_moleculardynamics::Move_Atoms()
     {
         // calculate temperture
@@ -133,9 +153,9 @@ namespace moleculardynamics {
         Utot = Up + Uk;
 
         // 温度の計算
-        Tc = Uk / (1.5 * static_cast<double>(NumAtom));
+        Tc_ = Uk / (1.5 * static_cast<double>(NumAtom));
 
-        auto const s = std::sqrt((Tg + alpha * (Tc - Tg)) / Tc);
+        auto const s = std::sqrt((Tg_ + alpha * (Tc_ - Tg_)) / Tc_);
 		
         switch (MD_iter) {
         case 1:
@@ -323,7 +343,7 @@ namespace moleculardynamics {
 
 	void Ar_moleculardynamics::MD_initVel()
 	{
-		auto const v = std::sqrt(3.0 * Tg);
+		auto const v = std::sqrt(3.0 * Tg_);
 
 		myrandom::MyRand mr(-1.0, 1.0);
 

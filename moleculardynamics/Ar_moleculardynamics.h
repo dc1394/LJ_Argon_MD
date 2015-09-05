@@ -48,11 +48,23 @@ namespace moleculardynamics {
         */
         void Calc_Forces();
 
-        //! A public member function.
+        //! A public member function (constant).
         /*!
             n番目の原子に働く力を求める
         */
         float getForce(std::int32_t n) const;
+
+        //! A public member function (constant).
+        /*!
+            計算された温度の絶対温度を求める
+        */
+        float getTcalc() const;
+
+        //! A public member function (constant).
+        /*!
+            与えた温度の絶対温度を求める
+        */
+        float getTgiven() const;
 
         //! A public member function.
         /*!
@@ -83,7 +95,7 @@ namespace moleculardynamics {
 		*/
 		void MD_initVel();
 
-		//! A private member function.
+		//! A public member function (constant).
 		/*!
 			ノルムの二乗を求める
 			\param x x座標
@@ -121,6 +133,24 @@ namespace moleculardynamics {
         // #region メンバ変数
 
 	private:
+        //! A private member variable (constant).
+        /*!
+            ボルツマン定数
+        */
+        static double const KB;
+        
+        //! A private member variable (constant).
+        /*!
+            アルゴン原子に対するσ
+        */
+        static double const SIGMA;
+
+        //! A private member variable (constant).
+        /*!
+            アルゴン原子に対するε
+        */
+        static double const YPSILON;
+
 		//! A private member variable (constant).
 		/*!
 			Woodcockの温度スケーリングの係数
@@ -233,13 +263,13 @@ namespace moleculardynamics {
 		/*!
 			計算された温度Tcalc
 		*/
-        double Tc;
+        double Tc_;
 
 		//! A private member variable.
 		/*!
 			与える温度Tgiven
 		*/
-        double Tg = 10.0;
+        double Tg_ = 0.5;
 
 		//! A private member variable.
 		/*!
