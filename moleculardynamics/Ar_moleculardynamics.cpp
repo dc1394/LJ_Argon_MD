@@ -39,6 +39,7 @@ namespace moleculardynamics {
 		Z1(Nc * Nc * Nc * 4)
 	{
 		// initalize parameters
+		lat = std::pow(2.0, 2.0 / 3.0) * scale;
 		auto uvol = lat * lat * lat;
 		rho = 4.0 / uvol;
 

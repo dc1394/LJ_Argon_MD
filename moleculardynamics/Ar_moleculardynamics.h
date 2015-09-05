@@ -173,7 +173,7 @@ namespace moleculardynamics {
 		/*!
 			MDのステップ数
 		*/
-		std::int32_t MD_iter = 1;
+		std::int32_t MD_iter;
 
 		//! A private member variable (constant).
 		/*!
@@ -227,7 +227,7 @@ namespace moleculardynamics {
 		/*!
 			時間	
 		*/
-		double t = 0.0;
+		double t;
 
 		//! A private member variable.
 		/*!
@@ -239,7 +239,7 @@ namespace moleculardynamics {
 		/*!
 			与える温度Tgiven
 		*/
-        double Tg = 0.5;
+        double Tg = 10.0;
 
 		//! A private member variable.
 		/*!
