@@ -128,12 +128,12 @@ namespace moleculardynamics {
 
     float Ar_moleculardynamics::getTcalc() const
     {
-        return static_cast<float>(Tc_ * Ar_moleculardynamics::KB / Ar_moleculardynamics::YPSILON);
+        return static_cast<float>(Tc_ * Ar_moleculardynamics::YPSILON / Ar_moleculardynamics::KB);
     }
 
     float Ar_moleculardynamics::getTgiven() const
     {
-        return static_cast<float>(Tg_ * Ar_moleculardynamics::KB / Ar_moleculardynamics::YPSILON);
+        return static_cast<float>(Tg_ * Ar_moleculardynamics::YPSILON / Ar_moleculardynamics::KB);
     }
 
     void Ar_moleculardynamics::Move_Atoms()
