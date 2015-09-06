@@ -265,11 +265,7 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
     }
     else
     {
-		auto boundarylen = boost::numeric_cast<float>(armd.periodiclen);
-		BOOST_ASSERT(std::fabs(boost::numeric_cast<float>(*boost::max_element(armd.Y())) - boundarylen) < TINY);
-		BOOST_ASSERT(std::fabs(boost::numeric_cast<float>(*boost::max_element(armd.Z())) - boundarylen) < TINY);
-
-		auto const pos = boundarylen * 0.5f;
+		auto const pos = boost::numeric_cast<float>(armd.periodiclen()) * 0.5f;
 
 		// Create vertex buffer
 		std::array<SimpleVertex, NUMVERTEXBUFFER> const vertices =
@@ -718,9 +714,10 @@ void RenderText(ID3D10Device* pd3dDevice, double fTime)
     txthelper->DrawTextLine(DXUTGetFrameStats(DXUTIsVsyncEnabled()));
     txthelper->DrawTextLine(DXUTGetDeviceStats());
     //txthelper->DrawTextLine((boost::wformat(L"CPUスレッド数: %d") % cputhread).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"原子数: %d") % armd.NumAtom).str().c_str());
 	txthelper->DrawTextLine((boost::wformat(L"MDのステップ数: %d") % armd.MD_iter).str().c_str());
 	txthelper->DrawTextLine((boost::wformat(L"経過時間: %.3f (ps)") % armd.getDeltat()).str().c_str());
-	txthelper->DrawTextLine((boost::wformat(L"格子定数: %.3f (Å)") % armd.lat).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"格子定数: %.3f (Å)") % armd.getLatticeconst()).str().c_str());
 	txthelper->DrawTextLine((boost::wformat(L"設定された温度: %.1f (K)") % armd.getTgiven()).str().c_str());
 	txthelper->DrawTextLine((boost::wformat(L"計算された温度: %.1f (K)") % armd.getTcalc()).str().c_str());
 	txthelper->End();

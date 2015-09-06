@@ -60,6 +60,18 @@ namespace moleculardynamics {
         */
         float getForce(std::int32_t n) const;
 
+		//! A public member function (constant).
+		/*!
+			格子定数を求める
+		*/
+		double getLatticeconst() const;
+
+		//! A public member function (constant).
+		/*!
+			系の圧力を求める
+		*/
+		double getPressure() const;
+
         //! A public member function (constant).
         /*!
             計算された温度の絶対温度を求める
@@ -86,12 +98,21 @@ namespace moleculardynamics {
 
 		//! A public member function.
 		/*!
+			スーパーセルの大きさを設定する
+			\param Nc_ スーパーセルの大きさ
+		*/
+		void setScale(double Nc_);
+
+		//! A public member function.
+		/*!
+			格子定数のスケールを設定する
 			\param scale 設定する格子定数のスケール
 		*/
 		void setScale(double scale);
 
 		//! A public member function.
 		/*!
+			温度を設定する
 			\param Tgiven 設定する温度（絶対温度）
 		*/
 		void setTgiven(double Tgiven);
@@ -130,16 +151,22 @@ namespace moleculardynamics {
 	public:
 		//! A property.
 		/*!
-			格子定数へのプロパティ
-		*/
-		Property<double> const lat;
-
-		//! A property.
-		/*!
 			MDのステップ数へのプロパティ
 		*/
 		Property<std::int32_t> const MD_iter;
+		
+		//! A property.
+		/*!
+			原子数へのプロパティ
+		*/
+		Property<std::int32_t> const NumAtom;
 
+		//! A property.
+		/*!
+			格子定数へのプロパティ
+		*/
+		Property<double> const periodiclen;
+		
 		//! A property.
 		/*!
 			n番目の原子のx座標へのプロパティ
@@ -234,7 +261,7 @@ namespace moleculardynamics {
 		/*!
 			スーパーセルの個数
 		*/
-		std::int32_t const Nc = 5;
+		std::int32_t Nc_ = 5;
 
 		//! A private member variable.
 		/*!
@@ -268,16 +295,15 @@ namespace moleculardynamics {
 		
 		//! A private member variable.
 		/*!
-			原子の個数
+			原子数
 		*/
-		std::int32_t NumAtom;
+		std::int32_t NumAtom_;
 		
-	public:
 		//! A private member variable.
 		/*!
 			周期境界条件の長さ
 		*/
-		double periodiclen;
+		double periodiclen_;
 
 		//! A private member variable (constant).
 		/*!
@@ -326,7 +352,7 @@ namespace moleculardynamics {
 			与える温度Tgiven
 		*/
         double Tg_;
-		
+
 		//! A private member variable (constant).
 		/*!
 			ポテンシャルエネルギーの打ち切り
