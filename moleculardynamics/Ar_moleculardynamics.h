@@ -66,12 +66,6 @@ namespace moleculardynamics {
 		*/
 		double getLatticeconst() const;
 
-		//! A public member function (constant).
-		/*!
-			系の圧力を求める
-		*/
-		double getPressure() const;
-
         //! A public member function (constant).
         /*!
             計算された温度の絶対温度を求める
@@ -101,7 +95,7 @@ namespace moleculardynamics {
 			スーパーセルの大きさを設定する
 			\param Nc_ スーパーセルの大きさ
 		*/
-		void setScale(double Nc_);
+		void setNc(double Nc_);
 
 		//! A public member function.
 		/*!
