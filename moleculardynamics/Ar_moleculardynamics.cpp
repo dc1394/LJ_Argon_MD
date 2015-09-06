@@ -15,9 +15,22 @@
 namespace moleculardynamics {
     // #region static private 定数
 
+	double const Ar_moleculardynamics::FIRSTSCALE = 1.0;
+
+	double const Ar_moleculardynamics::FIRSTTEMP = 50.0;
+
+	double const Ar_moleculardynamics::ALPHA = 0.2;
+
+	double const Ar_moleculardynamics::AVOGADRO_CONSTANT = 6.022140857E+23;
+
+	double const Ar_moleculardynamics::DT = 0.001;
+
     double const Ar_moleculardynamics::KB = 1.3806488E-23;
 
-    double const Ar_moleculardynamics::SIGMA = 3.405;
+    double const Ar_moleculardynamics::SIGMA = 3.405E-10;
+
+	double const Ar_moleculardynamics::TAU =
+		std::sqrt(0.039948 / Ar_moleculardynamics::AVOGADRO_CONSTANT * Ar_moleculardynamics::SIGMA * Ar_moleculardynamics::SIGMA / Ar_moleculardynamics::YPSILON);
 
     double const Ar_moleculardynamics::YPSILON = 1.6540172624E-21;
 
@@ -27,16 +40,19 @@ namespace moleculardynamics {
 
 	Ar_moleculardynamics::Ar_moleculardynamics()
 		:
+		lat([this] { return lat_; }, nullptr),
+		MD_iter([this] { return MD_iter_; }, nullptr),
 		X([this] { return std::cref(X_); }, nullptr),
 		Y([this] { return std::cref(Y_); }, nullptr),
 		Z([this] { return std::cref(Z_); }, nullptr),
-		dt2(dt * dt),
+		dt2(DT * DT),
 		FX(Nc * Nc * Nc * 4),
 		FY(Nc * Nc * Nc * 4),
 		FZ(Nc * Nc * Nc * 4),
 		rc2(rc * rc),
 		rcm6(std::pow(rc, -6.0)),
 		rcm12(std::pow(rc, -12.0)),
+		Tg_(Ar_moleculardynamics::FIRSTTEMP * Ar_moleculardynamics::KB / Ar_moleculardynamics::YPSILON),
 		Vrc(4.0 * (rcm12 - rcm6)),
 		VX(Nc * Nc * Nc * 4),
 		VY(Nc * Nc * Nc * 4),
@@ -49,12 +65,12 @@ namespace moleculardynamics {
 		Z1(Nc * Nc * Nc * 4)
 	{
 		// initalize parameters
-		lat = std::pow(2.0, 2.0 / 3.0) * scale;
-		auto uvol = lat * lat * lat;
-		rho = 4.0 / uvol;
+		lat_ = std::pow(2.0, 2.0 / 3.0) * scale_;
 
         recalc();
 
+		periodiclen = lat_ * static_cast<double>(Nc);
+		
 		tbb::task_scheduler_init init;
 	}
 
@@ -70,8 +86,6 @@ namespace moleculardynamics {
             FZ[n] = 0.0;
         }
 
-        Up = 0.0;
-
 		tbb::parallel_for(
 			0,
 			NumAtom,
@@ -83,9 +97,9 @@ namespace moleculardynamics {
 				for (auto i = -ncp; i <= ncp; i++) {
 					for (auto j = -ncp; j <= ncp; j++) {
 						for (auto k = -ncp; k <= ncp; k++) {
-							auto const sx = static_cast<double>(i)* lat;
-							auto const sy = static_cast<double>(j)* lat;
-							auto const sz = static_cast<double>(k)* lat;
+							auto const sx = static_cast<double>(i) * periodiclen;
+							auto const sy = static_cast<double>(j) * periodiclen;
+							auto const sz = static_cast<double>(k) * periodiclen;
 
 							// 自分自身との相互作用を排除
 							if (n != m || i != 0 || j != 0 || k != 0) {
@@ -107,10 +121,6 @@ namespace moleculardynamics {
 									FX[n] += dx / r * Fr;
 									FY[n] += dy / r * Fr;
 									FZ[n] += dz / r * Fr;
-
-									// 0.5 for double counting
-									// エネルギーの計算、ただし二重計算のために0.5をかけておく
-									Up += 0.5 * (4.0 * (rm12 - rm6) - Vrc);
 								}
 							}
 						}
@@ -120,26 +130,31 @@ namespace moleculardynamics {
 		},
 		tbb::auto_partitioner());
     }
+	
+	float Ar_moleculardynamics::getDeltat() const
+	{
+		return static_cast<float>(t * TAU * 1.0E+12);
+	}
 
     float Ar_moleculardynamics::getForce(std::int32_t n) const
     {
         return static_cast<float>(std::sqrt(norm2(FX[n], FY[n], FZ[n])));
     }
 
-    float Ar_moleculardynamics::getTcalc() const
+    double Ar_moleculardynamics::getTcalc() const
     {
-        return static_cast<float>(Tc_ * Ar_moleculardynamics::YPSILON / Ar_moleculardynamics::KB);
+        return Tc_ * Ar_moleculardynamics::YPSILON / Ar_moleculardynamics::KB;
     }
 
-    float Ar_moleculardynamics::getTgiven() const
+    double Ar_moleculardynamics::getTgiven() const
     {
-        return static_cast<float>(Tg_ * Ar_moleculardynamics::YPSILON / Ar_moleculardynamics::KB);
+        return Tg_ * Ar_moleculardynamics::YPSILON / Ar_moleculardynamics::KB;
     }
 
     void Ar_moleculardynamics::Move_Atoms()
     {
         // calculate temperture
-        Uk = 0.0;
+        auto Uk = 0.0;
 
         for (auto n = 0; n < NumAtom; n++) {
             auto const v2 = norm2(VX[n], VY[n], VZ[n]);
@@ -149,15 +164,12 @@ namespace moleculardynamics {
         // 運動エネルギーの計算
         Uk *= 0.5;
 
-        // 全エネルギーの計算
-        Utot = Up + Uk;
-
         // 温度の計算
         Tc_ = Uk / (1.5 * static_cast<double>(NumAtom));
 
-        auto const s = std::sqrt((Tg_ + alpha * (Tc_ - Tg_)) / Tc_);
+        auto const s = std::sqrt((Tg_ + Ar_moleculardynamics::ALPHA * (Tc_ - Tg_)) / Tc_);
 		
-        switch (MD_iter) {
+        switch (MD_iter_) {
         case 1:
             // update the coordinates by the second order Euler method
             // 最初のステップだけ修正Euler法で時間発展
@@ -176,13 +188,13 @@ namespace moleculardynamics {
 				VZ[n] *= s;
 
 				// update coordinates and velocity
-				X_[n] += dt * VX[n] + 0.5 * FX[n] * dt2;
-				Y_[n] += dt * VY[n] + 0.5 * FY[n] * dt2;
-				Z_[n] += dt * VZ[n] + 0.5 * FZ[n] * dt2;
+				X_[n] += Ar_moleculardynamics::DT * VX[n] + 0.5 * FX[n] * dt2;
+				Y_[n] += Ar_moleculardynamics::DT * VY[n] + 0.5 * FY[n] * dt2;
+				Z_[n] += Ar_moleculardynamics::DT * VZ[n] + 0.5 * FZ[n] * dt2;
 
-				VX[n] += dt * FX[n];
-				VY[n] += dt * FY[n];
-				VZ[n] += dt * FZ[n];
+				VX[n] += Ar_moleculardynamics::DT * FX[n];
+				VY[n] += Ar_moleculardynamics::DT * FY[n];
+				VZ[n] += Ar_moleculardynamics::DT * FZ[n];
 			},
 				tbb::auto_partitioner());
             break;
@@ -211,9 +223,9 @@ namespace moleculardynamics {
 				//Y_[n] = 2.0 * Y_[n] - Y1[n] + FY[n] * dt2;
 				//Z_[n] = 2.0 * Z_[n] - Z1[n] + FZ[n] * dt2;
 //#endif
-				VX[n] = 0.5 * (X_[n] - X1[n]) / dt;
-				VY[n] = 0.5 * (Y_[n] - Y1[n]) / dt;
-				VZ[n] = 0.5 * (Z_[n] - Z1[n]) / dt;
+				VX[n] = 0.5 * (X_[n] - X1[n]) / Ar_moleculardynamics::DT;
+				VY[n] = 0.5 * (Y_[n] - Y1[n]) / Ar_moleculardynamics::DT;
+				VZ[n] = 0.5 * (Z_[n] - Z1[n]) / Ar_moleculardynamics::DT;
 
 				X1[n] = rtmp[0];
 				Y1[n] = rtmp[1];
@@ -230,50 +242,61 @@ namespace moleculardynamics {
             NumAtom,
             1,
             [this](std::int32_t n) {
-            if (X_[n] > lat) {
-                X_[n] -= lat;
-                X1[n] -= lat;
+			if (X_[n] > periodiclen) {
+                X_[n] -= periodiclen;
+                X1[n] -= periodiclen;
             }
             else if (X_[n] < 0.0) {
-                X_[n] += lat;
-                X1[n] += lat;
+                X_[n] += periodiclen;
+                X1[n] += periodiclen;
             }
-            if (Y_[n] > lat) {
-                Y_[n] -= lat;
-                Y1[n] -= lat;
+            if (Y_[n] > periodiclen) {
+                Y_[n] -= periodiclen;
+                Y1[n] -= periodiclen;
             }
             else if (Y_[n] < 0.0) {
-                Y_[n] += lat;
-                Y1[n] += lat;
+                Y_[n] += periodiclen;
+                Y1[n] += periodiclen;
             }
-            if (Z_[n] > lat) {
-                Z_[n] -= lat;
-                Z1[n] -= lat;
+            if (Z_[n] > periodiclen) {
+                Z_[n] -= periodiclen;
+                Z1[n] -= periodiclen;
             }
             else if (Z_[n] < 0.0) {
-                Z_[n] += lat;
-                Z1[n] += lat;
+                Z_[n] += periodiclen;
+                Z1[n] += periodiclen;
             }
         },
             tbb::auto_partitioner());
 
         // 繰り返し回数と時間を増加
-        t = static_cast<double>(MD_iter)* dt;
-        MD_iter++;
+        t = static_cast<double>(MD_iter_) * Ar_moleculardynamics::DT;
+        MD_iter_++;
     }
 
     void Ar_moleculardynamics::recalc()
     {
 		t = 0.0;
-		MD_iter = 1;
-
-		lat = std::pow(2.0, 2.0 / 3.0) * scale;
+		MD_iter_ = 1;
 
         MD_initPos();
         MD_initVel();
-
-		lat *= static_cast<double>(Nc);
     }
+
+	void Ar_moleculardynamics::setScale(double scale)
+	{
+		scale_ = scale;
+		lat_ = std::pow(2.0, 2.0 / 3.0) * scale_;
+
+		recalc();
+
+		periodiclen = lat_ * static_cast<double>(Nc);
+	}
+
+	void Ar_moleculardynamics::setTgiven(double Tgiven)
+	{
+		Tg_ = Tgiven * Ar_moleculardynamics::KB / Ar_moleculardynamics::YPSILON;
+	}
 
     // #endregion publicメンバ関数
 
@@ -288,9 +311,9 @@ namespace moleculardynamics {
 			for (auto j = 0; j < Nc; j++) {
 				for (auto k = 0; k < Nc; k++) {
 				    // 基本セルをコピーする
-				    sx = static_cast<double>(i)* lat;
-				    sy = static_cast<double>(j)* lat;
-				    sz = static_cast<double>(k)* lat;
+				    sx = static_cast<double>(i) * lat_;
+				    sy = static_cast<double>(j) * lat_;
+				    sz = static_cast<double>(k) * lat_;
 
 				    // 基本セル内には4つの原子がある
 				    X_[n] = sx;
@@ -298,19 +321,19 @@ namespace moleculardynamics {
 				    Z_[n] = sz;
 				    n++;
 
-				    X_[n] = 0.5 * lat + sx;
-				    Y_[n] = 0.5 * lat + sy;
+				    X_[n] = 0.5 * lat_ + sx;
+				    Y_[n] = 0.5 * lat_ + sy;
 				    Z_[n] = sz;
 				    n++;
 
 				    X_[n] = sx;
-				    Y_[n] = 0.5 * lat + sy;
-				    Z_[n] = 0.5 * lat + sz;
+				    Y_[n] = 0.5 * lat_ + sy;
+				    Z_[n] = 0.5 * lat_ + sz;
 				    n++;
 
-				    X_[n] = 0.5 * lat + sx;
+				    X_[n] = 0.5 * lat_ + sx;
 				    Y_[n] = sy;
-				    Z_[n] = 0.5 * lat + sz;
+				    Z_[n] = 0.5 * lat_ + sz;
 				    n++;
 				}
             }

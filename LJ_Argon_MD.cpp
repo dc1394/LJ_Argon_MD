@@ -18,19 +18,20 @@
 #include <vector>									// for std::vector
 #include <boost/assert.hpp>                         // for BOOST_ASSERT
 #include <boost/cast.hpp>							// for boost::numeric_cast
+#include <boost/format.hpp>							// for boost::wformat
 #include <boost/range/algorithm/max_element.hpp>	// for boost::max_element
-
-//! A global variable (constant).
-/*!
-	箱の比率
-*/
-static auto const BOXRATIO = 1.1f;
 
 //! A global variable (constant).
 /*!
 	色の比率
 */
 static auto const COLORRATIO = 0.025f;
+
+//! A global variable (constant).
+/*!
+	格子定数の比率
+*/
+static auto const LATTICERATIO = 50.0;
 
 //! A global variable (constant).
 /*!
@@ -202,7 +203,10 @@ D3DXMATRIX g_View;
 #define IDC_CHANGEDEVICE        2
 #define IDC_TOGGLEROTATION      3
 #define IDC_RECALC              4
-#define IDC_SLIDER				5
+#define IDC_OUTPUT				5
+#define IDC_OUTPUT2				6
+#define IDC_SLIDER				7
+#define IDC_SLIDER2				8
 
 void CALLBACK OnGUIEvent(UINT nEvent, int nControlID, CDXUTControl* pControl, void* pUserContext);
 
@@ -261,6 +265,64 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
     }
     else
     {
+		auto boundarylen = boost::numeric_cast<float>(armd.periodiclen);
+		BOOST_ASSERT(std::fabs(boost::numeric_cast<float>(*boost::max_element(armd.Y())) - boundarylen) < TINY);
+		BOOST_ASSERT(std::fabs(boost::numeric_cast<float>(*boost::max_element(armd.Z())) - boundarylen) < TINY);
+
+		auto const pos = boundarylen * 0.5f;
+
+		// Create vertex buffer
+		std::array<SimpleVertex, NUMVERTEXBUFFER> const vertices =
+		{
+			D3DXVECTOR3(-pos, pos, -pos),
+			D3DXVECTOR3(pos, pos, -pos),
+			D3DXVECTOR3(pos, pos, pos),
+			D3DXVECTOR3(-pos, pos, pos),
+
+			D3DXVECTOR3(-pos, -pos, -pos),
+			D3DXVECTOR3(pos, -pos, -pos),
+			D3DXVECTOR3(pos, -pos, pos),
+			D3DXVECTOR3(-pos, -pos, pos),
+		};
+
+		bd.Usage = D3D10_USAGE_DEFAULT;
+		bd.ByteWidth = sizeof(SimpleVertex) * NUMVERTEXBUFFER;
+		bd.BindFlags = D3D10_BIND_VERTEX_BUFFER;
+		bd.CPUAccessFlags = 0;
+		bd.MiscFlags = 0;
+
+		D3D10_SUBRESOURCE_DATA InitData;
+		InitData.pSysMem = vertices.data();
+
+		ID3D10Buffer * pVertexBuffertmp;
+		utility::v_return(pd3dDevice->CreateBuffer(&bd, &InitData, &pVertexBuffertmp));
+		pVertexBuffer.reset(pVertexBuffertmp);
+
+		// Create index buffer
+		// Create vertex buffer
+		std::array<DWORD, NUMINDEXBUFFER> const indices =
+		{
+			0, 1, 2,
+			3, 0, 4,
+
+			5, 1, 2,
+			6, 5, 4,
+
+			7, 3, 7,
+			6
+		};
+
+		bd.Usage = D3D10_USAGE_DEFAULT;
+		bd.ByteWidth = sizeof(DWORD) * NUMINDEXBUFFER;
+		bd.BindFlags = D3D10_BIND_INDEX_BUFFER;
+		bd.CPUAccessFlags = 0;
+		bd.MiscFlags = 0;
+		InitData.pSysMem = indices.data();
+
+		ID3D10Buffer * pIndexBuffertmp;
+		utility::v_return(pd3dDevice->CreateBuffer(&bd, &InitData, &pIndexBuffertmp));
+		pIndexBuffer.reset(pIndexBuffertmp);
+
         armd.Calc_Forces();
         armd.Move_Atoms();
 
@@ -282,8 +344,8 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
         // Set vertex buffer
         auto const stride = sizeof(SimpleVertex);
         auto const offset = 0U;
-        auto const pVertexBuffertmp = pVertexBuffer.get();
-        pd3dDevice->IASetVertexBuffers(0, 1, &pVertexBuffertmp, &stride, &offset);
+        auto const pVertexBuffertmp2 = pVertexBuffer.get();
+        pd3dDevice->IASetVertexBuffers(0, 1, &pVertexBuffertmp2, &stride, &offset);
 
         // Set index buffer
         pd3dDevice->IASetIndexBuffer(pIndexBuffer.get(), DXGI_FORMAT_R32_UINT, 0);
@@ -298,7 +360,6 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
         }
 
         auto const size = pmeshvec.size();
-        static auto const origin = boost::numeric_cast<float>(*boost::max_element(armd.X())) / 2.0f;
 
         for (auto i = 0U; i < size; i++) {
             auto color = SphereColor;
@@ -309,9 +370,9 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
             D3DXMATRIX World;
             D3DXMatrixTranslation(
                 &World,
-                boost::numeric_cast<float>(armd.X()[i]) - origin,
-                boost::numeric_cast<float>(armd.Y()[i]) - origin,
-                boost::numeric_cast<float>(armd.Z()[i]) - origin);
+                boost::numeric_cast<float>(armd.X()[i]) - pos,
+                boost::numeric_cast<float>(armd.Y()[i]) - pos,
+                boost::numeric_cast<float>(armd.Z()[i]) - pos);
             D3DXMatrixMultiply(&World, &(*g_Camera.GetWorldMatrix()), &World);
 
             // Update variables
@@ -447,64 +508,6 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
         pmesh.reset(pmeshtmp);
     }
 
-    auto boundarylen = boost::numeric_cast<float>(*boost::max_element(armd.X()));
-    BOOST_ASSERT(std::fabs(boost::numeric_cast<float>(*boost::max_element(armd.Y())) - boundarylen) < TINY);
-    BOOST_ASSERT(std::fabs(boost::numeric_cast<float>(*boost::max_element(armd.Z())) - boundarylen) < TINY);
-
-	auto const pos = boundarylen * BOXRATIO;
-
-    // Create vertex buffer
-    std::array<SimpleVertex, NUMVERTEXBUFFER> const vertices =
-    {
-        D3DXVECTOR3(-pos, pos, -pos),
-        D3DXVECTOR3(pos, pos, -pos),
-        D3DXVECTOR3(pos, pos, pos), 
-        D3DXVECTOR3(-pos, pos, pos),
-
-        D3DXVECTOR3(-pos, -pos, -pos), 
-        D3DXVECTOR3(pos, -pos, -pos),
-        D3DXVECTOR3(pos, -pos, pos),
-        D3DXVECTOR3(-pos, -pos, pos),
-    };
-
-    bd.Usage = D3D10_USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(SimpleVertex) * NUMVERTEXBUFFER;
-    bd.BindFlags = D3D10_BIND_VERTEX_BUFFER;
-    bd.CPUAccessFlags = 0;
-    bd.MiscFlags = 0;
-
-    D3D10_SUBRESOURCE_DATA InitData;
-    InitData.pSysMem = vertices.data();
-
-	ID3D10Buffer * pVertexBuffertmp;
-    utility::v_return(pd3dDevice->CreateBuffer(&bd, &InitData, &pVertexBuffertmp));
-	pVertexBuffer.reset(pVertexBuffertmp);
-
-    // Create index buffer
-    // Create vertex buffer
-    std::array<DWORD, NUMINDEXBUFFER> const indices =
-    {
-        0, 1, 2,
-        3, 0, 4,
-
-        5, 1, 2,
-        6, 5, 4,
-
-        7, 3, 7,
-        6
-    };
-
-    bd.Usage = D3D10_USAGE_DEFAULT;
-    bd.ByteWidth = sizeof(DWORD) * NUMINDEXBUFFER;
-    bd.BindFlags = D3D10_BIND_INDEX_BUFFER;
-    bd.CPUAccessFlags = 0;
-    bd.MiscFlags = 0;
-    InitData.pSysMem = indices.data();
-	
-	ID3D10Buffer * pIndexBuffertmp;
-    utility::v_return(pd3dDevice->CreateBuffer(&bd, &InitData, &pIndexBuffertmp));
-	pIndexBuffer.reset(pIndexBuffertmp);
-	
     D3DXVECTOR3 vEye(0.0f, 10.0f, 10.0f);
 	D3DXVECTOR3 vLook(0.0f, 0.0f, 0.0f);
     D3DXVECTOR3 const Up(0.0f, 1.0f, 0.0f);
@@ -569,42 +572,13 @@ void CALLBACK OnGUIEvent(UINT nEvent, int nControlID, CDXUTControl* pControl, vo
         armd.recalc();
         break;
 
-   /* case IDC_READDATA:
-        StopDraw();
-        ReadData();
-        SetUI();
-        scene->Pgd = pgd;
-        scene->Thread_end = false;
-        scene->Redraw = true;
-        first = true;
-        ::SetWindowText(DXUTGetHWND(), CreateWindowTitle().c_str());
-        break;
-
-    case IDC_COMBOBOX:
-    {
-        auto const pItem = (static_cast<CDXUTComboBox *>(pControl))->GetSelectedItem();
-        if (pItem)
-        {
-            drawdata = reinterpret_cast<std::uint32_t>(pItem->pData);
-            RedrawFlagTrue();
-        }
-        break;
-    }
-
-    case IDC_RADIOA:
-        reim = TDXScene::Re_Im_type::REAL;
-        RedrawFlagTrue();
-        break;
-
-    case IDC_RADIOB:
-        reim = TDXScene::Re_Im_type::IMAGINARY;
-        RedrawFlagTrue();
-        break;
-
     case IDC_SLIDER:
-        scene->Vertexsize(static_cast<std::vector<TDXScene::SimpleVertex2>::size_type>((reinterpret_cast<CDXUTSlider*>(pControl))->GetValue()));
-        RedrawFlagTrue();
-        break;*/
+        armd.setTgiven(static_cast<double>((reinterpret_cast<CDXUTSlider*>(pControl))->GetValue()));
+        break;
+
+	case IDC_SLIDER2:
+		armd.setScale(static_cast<double>((reinterpret_cast<CDXUTSlider*>(pControl))->GetValue()) / LATTICERATIO);
+		break;
 
     default:
         break;
@@ -706,69 +680,31 @@ void SetUI()
 
     g_HUD.AddButton(IDC_RECALC, L"再計算", 35, iY += 34, 125, 22);
 
-    // Combobox
-    //CDXUTComboBox* pCombo;
-    //g_HUD.AddComboBox(IDC_COMBOBOX, 35, iY += 34, 125, 22, L'O', false, &pCombo);
-    //if (pCombo)
-    //{
-    //    pCombo->SetDropHeight(100);
-    //    pCombo->RemoveAllItems();
-    //    BOOST_ASSERT(pgd->N > static_cast<std::int32_t>(pgd->L));
-    //    auto orbital(std::to_wstring(pgd->N));
-    //    switch (pgd->L) {
-    //    case 0:
-    //    {
-    //        orbital += L's';
-    //        pCombo->AddItem(orbital.c_str(), reinterpret_cast<LPVOID>(0x11111111));
-    //    }
-    //    break;
+    // 温度の変更
+    g_HUD.AddStatic(IDC_OUTPUT, L"温度", 20, iY += 34, 125, 22);
+    g_HUD.GetStatic(IDC_OUTPUT)->SetTextColor(D3DCOLOR_ARGB(255, 255, 255, 255));
+    g_HUD.AddSlider(
+		IDC_SLIDER,
+		35,
+		iY += 24,
+		125,
+		22,
+		1,
+		1000,
+		boost::numeric_cast<int>(moleculardynamics::Ar_moleculardynamics::FIRSTTEMP));
 
-    //    case 1:
-    //    {
-    //        pCombo->AddItem((orbital + L"px").c_str(), reinterpret_cast<LPVOID>(0x11111111));
-    //        pCombo->AddItem((orbital + L"py").c_str(), reinterpret_cast<LPVOID>(0x12121212));
-    //        pCombo->AddItem((orbital + L"pz").c_str(), reinterpret_cast<LPVOID>(0x13131313));
-    //    }
-    //    break;
-
-    //    case 2:
-    //    {
-    //        pCombo->AddItem((orbital + L"dxy").c_str(), reinterpret_cast<LPVOID>(0x11111111));
-    //        pCombo->AddItem((orbital + L"dyz").c_str(), reinterpret_cast<LPVOID>(0x12121212));
-    //        pCombo->AddItem((orbital + L"dzx").c_str(), reinterpret_cast<LPVOID>(0x13131313));
-    //        pCombo->AddItem((orbital + L"dx^2-y^2").c_str(), reinterpret_cast<LPVOID>(0x14141414));
-    //        pCombo->AddItem((orbital + L"dz^2").c_str(), reinterpret_cast<LPVOID>(0x15151515));
-    //    }
-    //    break;
-
-    //    case 3:
-    //    {
-    //        pCombo->AddItem((orbital + L"fxz^2").c_str(), reinterpret_cast<LPVOID>(0x11111111));
-    //        pCombo->AddItem((orbital + L"fyz^2").c_str(), reinterpret_cast<LPVOID>(0x12121212));
-    //        pCombo->AddItem((orbital + L"fz(x^2-y^2)").c_str(), reinterpret_cast<LPVOID>(0x13131313));
-    //        pCombo->AddItem((orbital + L"fxyz").c_str(), reinterpret_cast<LPVOID>(0x14141414));
-    //        pCombo->AddItem((orbital + L"fx(x^2-3y^2)").c_str(), reinterpret_cast<LPVOID>(0x15151515));
-    //        pCombo->AddItem((orbital + L"fy(3x^2-y^2)").c_str(), reinterpret_cast<LPVOID>(0x16161616));
-    //        pCombo->AddItem((orbital + L"fz^2").c_str(), reinterpret_cast<LPVOID>(0x17171717));
-    //    }
-    //    break;
-
-    //    default:
-    //        throw std::runtime_error("g以上の軌道には対応していません");
-    //        break;
-    //    }
-
-    //    if (pgd->Rho_wf_type_ == getdata::GetData::Rho_Wf_type::WF) {
-    //        // Radio buttons
-    //        g_HUD.AddRadioButton(IDC_RADIOA, 1, L"実部", 35, iY += 34, 125, 22, true, L'1');
-    //        g_HUD.AddRadioButton(IDC_RADIOB, 1, L"虚部", 35, iY += 28, 125, 22, false, L'2');
-    //    }
-    //}
-
-    //// 角度の調整
-    //g_HUD.AddStatic(IDC_OUTPUT, L"頂点数", 20, iY += 34, 125, 22);
-    //g_HUD.GetStatic(IDC_OUTPUT)->SetTextColor(D3DCOLOR_ARGB(255, 255, 255, 255));
-    //g_HUD.AddSlider(IDC_SLIDER, 35, iY += 24, 125, 22, 0, 1000000, TDXScene::VERTEXSIZE_FIRST);
+	// 格子定数の変更
+	g_HUD.AddStatic(IDC_OUTPUT2, L"格子定数", 20, iY += 34, 125, 22);
+	g_HUD.GetStatic(IDC_OUTPUT2)->SetTextColor(D3DCOLOR_ARGB(255, 255, 255, 255));
+	g_HUD.AddSlider(
+		IDC_SLIDER2,
+		35,
+		iY += 24,
+		125,
+		22,
+		30,
+		100,
+		boost::numeric_cast<int>(moleculardynamics::Ar_moleculardynamics::FIRSTSCALE * LATTICERATIO));
 }
 
 //--------------------------------------------------------------------------------------
@@ -782,9 +718,12 @@ void RenderText(ID3D10Device* pd3dDevice, double fTime)
     txthelper->DrawTextLine(DXUTGetFrameStats(DXUTIsVsyncEnabled()));
     txthelper->DrawTextLine(DXUTGetDeviceStats());
     //txthelper->DrawTextLine((boost::wformat(L"CPUスレッド数: %d") % cputhread).str().c_str());
-    //txthelper->DrawTextLine((boost::wformat(L"頂点数 = %d") % scene->Vertexsize()).str().c_str());
-    //txthelper->DrawTextLine(str.c_str());
-    txthelper->End();
+	txthelper->DrawTextLine((boost::wformat(L"MDのステップ数: %d") % armd.MD_iter).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"経過時間: %.3f (ps)") % armd.getDeltat()).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"格子定数: %.3f (Å)") % armd.lat).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"設定された温度: %.1f (K)") % armd.getTgiven()).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"計算された温度: %.1f (K)") % armd.getTcalc()).str().c_str());
+	txthelper->End();
     pd3dDevice->IASetInputLayout(pInputLayout.get());
 
     auto const blendFactor = 0.0f;

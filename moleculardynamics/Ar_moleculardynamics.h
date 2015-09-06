@@ -47,8 +47,14 @@ namespace moleculardynamics {
             原子に働く力を計算する
         */
         void Calc_Forces();
+		
+		//! A public member function (constant).
+		/*!
+			シミュレーションを開始してからの経過時間を求める
+		*/
+		float getDeltat() const;
 
-        //! A public member function (constant).
+		//! A public member function (constant).
         /*!
             n番目の原子に働く力を求める
         */
@@ -58,13 +64,13 @@ namespace moleculardynamics {
         /*!
             計算された温度の絶対温度を求める
         */
-        float getTcalc() const;
+        double getTcalc() const;
 
         //! A public member function (constant).
         /*!
             与えた温度の絶対温度を求める
         */
-        float getTgiven() const;
+        double getTgiven() const;
 
         //! A public member function.
         /*!
@@ -77,6 +83,18 @@ namespace moleculardynamics {
             再計算する
         */
         void recalc();
+
+		//! A public member function.
+		/*!
+			\param scale 設定する格子定数のスケール
+		*/
+		void setScale(double scale);
+
+		//! A public member function.
+		/*!
+			\param Tgiven 設定する温度（絶対温度）
+		*/
+		void setTgiven(double Tgiven);
 
         // #endregion publicメンバ関数
 
@@ -112,6 +130,18 @@ namespace moleculardynamics {
 	public:
 		//! A property.
 		/*!
+			格子定数へのプロパティ
+		*/
+		Property<double> const lat;
+
+		//! A property.
+		/*!
+			MDのステップ数へのプロパティ
+		*/
+		Property<std::int32_t> const MD_iter;
+
+		//! A property.
+		/*!
 			n番目の原子のx座標へのプロパティ
 		*/
 		Property<std::vector<double> const &> const X;
@@ -132,8 +162,39 @@ namespace moleculardynamics {
 
         // #region メンバ変数
 
+	public:
+		//! A private member variable (constant).
+		/*!
+			初期の格子定数のスケール
+		*/
+		static double const FIRSTSCALE;
+
+		//! A private member variable (constant).
+		/*!
+			初期温度（絶対温度）
+		*/
+		static double const FIRSTTEMP;
+
 	private:
-        //! A private member variable (constant).
+		//! A private member variable (constant).
+		/*!
+			Woodcockの温度スケーリングの係数
+		*/
+		static double const ALPHA;
+
+		//! A private member variable (constant).
+		/*!
+			アボガドロ定数
+		*/
+		static double const AVOGADRO_CONSTANT;
+
+		//! A private member variable (constant).
+		/*!
+			時間刻みΔt
+		*/
+		static double const DT;
+				
+		//! A private member variable (constant).
         /*!
             ボルツマン定数
         */
@@ -145,23 +206,17 @@ namespace moleculardynamics {
         */
         static double const SIGMA;
 
+		//! A private member variable (constant).
+		/*!
+			アルゴン原子に対するτ
+		*/
+		static double const TAU;
+
         //! A private member variable (constant).
         /*!
             アルゴン原子に対するε
         */
         static double const YPSILON;
-
-		//! A private member variable (constant).
-		/*!
-			Woodcockの温度スケーリングの係数
-		*/
-		double const alpha = 0.2;
-
-        //! A private member variable (constant).
-        /*!
-            時間刻み
-        */
-        double const dt = 0.001;
 
 		//! A private member variable (constant).
 		/*!
@@ -173,7 +228,7 @@ namespace moleculardynamics {
 		/*!
 			格子定数
 		*/
-		double lat;
+		double lat_;
 
 		//! A private member variable (constant).
 		/*!
@@ -203,7 +258,7 @@ namespace moleculardynamics {
 		/*!
 			MDのステップ数
 		*/
-		std::int32_t MD_iter;
+		std::int32_t MD_iter_;
 
 		//! A private member variable (constant).
 		/*!
@@ -216,6 +271,13 @@ namespace moleculardynamics {
 			原子の個数
 		*/
 		std::int32_t NumAtom;
+		
+	public:
+		//! A private member variable.
+		/*!
+			周期境界条件の長さ
+		*/
+		double periodiclen;
 
 		//! A private member variable (constant).
 		/*!
@@ -240,19 +302,13 @@ namespace moleculardynamics {
 			カットオフ半径の逆数の12乗
 		*/
 		double const rcm12;
-		
-		//! A private member variable.
-		/*!
-			密度
-		*/
-		double rho;
 
-		//! A private member variable (constant).
+		//! A private member variable.
 		/*!
 			格子定数のスケーリングの定数
 		*/
-		double const scale = 1.0;
-
+		double scale_ = Ar_moleculardynamics::FIRSTSCALE;
+		
 		//! A private member variable.
 		/*!
 			時間	
@@ -269,25 +325,7 @@ namespace moleculardynamics {
 		/*!
 			与える温度Tgiven
 		*/
-        double Tg_ = 0.5;
-
-		//! A private member variable.
-		/*!
-			運動エネルギー
-		*/
-		double Uk;
-		
-		//! A private member variable.
-		/*!
-			ポテンシャルエネルギー
-		*/
-		double Up;
-
-		//! A private member variable.
-		/*!
-			総エネルギー
-		*/
-		double Utot;
+        double Tg_;
 		
 		//! A private member variable (constant).
 		/*!
