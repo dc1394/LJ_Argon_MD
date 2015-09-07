@@ -426,6 +426,7 @@
     <ResourceCompile Include="LJ_Argon_MD.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="document\readme.txt" />
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>

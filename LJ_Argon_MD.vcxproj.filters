@@ -21,6 +21,9 @@
     <Filter Include="myrandom">
       <UniqueIdentifier>{8937956e-25fd-47eb-9532-48ccc463c4d3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="document">
+      <UniqueIdentifier>{7fe29cb1-ae61-4327-9f5c-9132b680ae05}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="DXUT\Optional\directx.ico">
@@ -125,5 +128,10 @@
     <ResourceCompile Include="LJ_Argon_MD.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="document\readme.txt">
+      <Filter>document</Filter>
+    </Text>
   </ItemGroup>
 </Project>

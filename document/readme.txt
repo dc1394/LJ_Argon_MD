@@ -6,10 +6,16 @@
 ★これは何？
 　アルゴンについて、リアルタイム古典分子動力学シミュレーションを行うプログラムで
 　す。
-　ビルドには、以下のライブラリが必要です。
-　・Boost C++ Libraries
-　・DirectX SDK (June 2010)
-　・Intel® Threading Building Blocks (Intel® TBB)
+　実行には、以下のランタイムが必要です。
+　・DirectX End-User Runtimes (June 2010)
+　（ http://www.microsoft.com/en-us/download/details.aspx?id=8109 から、
+　　「directx_Jun2010_redist.exe」をダウンロードしてインストールしてください）。
+　・Visual Studio 2013 の Visual C++ 再頒布可能パッケージ x86版
+　（ https://www.microsoft.com/ja-jp/download/details.aspx?id=40784vcredist_x86.exe
+　　から、「vcredist_x86.exe」をダウンロードしてインストールしてください）。
+
+★使い方
+　「LJ_Argon_MD.exe」を実行してください。
 
 ★更新履歴
 　2015/9/7 ver.0.1  とりあえず公開。
@@ -55,7 +61,7 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------------
 
-　LJ_Argon_MDにはMicrosoft社によるDXUTライブラリを使用しています。
+　SchracVisualizeにはMicrosoft社によるDXUTライブラリを使用しています。
 　こちらのライセンスは以下になります。
 
 /*
