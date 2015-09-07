@@ -41,6 +41,7 @@ namespace moleculardynamics {
 	Ar_moleculardynamics::Ar_moleculardynamics()
 		:
 		MD_iter([this] { return MD_iter_; }, nullptr),
+		Nc([this] { return Nc_; }, nullptr),
 		NumAtom([this] { return NumAtom_; }, nullptr),
 		periodiclen([this] { return periodiclen_; }, nullptr),
 		X([this] { return std::cref(X_); }, nullptr),
@@ -133,9 +134,9 @@ namespace moleculardynamics {
 		tbb::auto_partitioner());
 	}
 	
-	float Ar_moleculardynamics::getDeltat() const
+	double Ar_moleculardynamics::getDeltat() const
 	{
-		return static_cast<float>(TAU * t * 1.0E+12);
+		return Ar_moleculardynamics::TAU * t * 1.0E+12;
 	}
 
     float Ar_moleculardynamics::getForce(std::int32_t n) const
@@ -146,6 +147,11 @@ namespace moleculardynamics {
 	double Ar_moleculardynamics::getLatticeconst() const
 	{
 		return Ar_moleculardynamics::SIGMA * lat_ * 1.0E+10;
+	}
+
+	double Ar_moleculardynamics::getPeriodiclen() const
+	{
+		return Ar_moleculardynamics::SIGMA * periodiclen_ * 1.0E+10;
 	}
 
     double Ar_moleculardynamics::getTcalc() const
@@ -284,6 +290,29 @@ namespace moleculardynamics {
         MD_initPos();
         MD_initVel();
     }
+
+	void Ar_moleculardynamics::setNc(std::int32_t Nc)
+	{
+		Nc_ = Nc;
+		FX.resize(Nc_ * Nc_ * Nc_ * 4);
+		FY.resize(Nc_ * Nc_ * Nc_ * 4);
+		FZ.resize(Nc_ * Nc_ * Nc_ * 4);
+		VX.resize(Nc_ * Nc_ * Nc_ * 4);
+		VY.resize(Nc_ * Nc_ * Nc_ * 4);
+		VZ.resize(Nc_ * Nc_ * Nc_ * 4);
+		X_.resize(Nc_ * Nc_ * Nc_ * 4);
+		X1.resize(Nc_ * Nc_ * Nc_ * 4);
+		Y_.resize(Nc_ * Nc_ * Nc_ * 4);
+		Y1.resize(Nc_ * Nc_ * Nc_ * 4);
+		Z_.resize(Nc_ * Nc_ * Nc_ * 4);
+		Z1.resize(Nc_ * Nc_ * Nc_ * 4);
+
+		lat_ = std::pow(2.0, 2.0 / 3.0) * scale_;
+
+		recalc();
+
+		periodiclen_ = lat_ * static_cast<double>(Nc_);
+	}
 
 	void Ar_moleculardynamics::setScale(double scale)
 	{

@@ -52,7 +52,7 @@ namespace moleculardynamics {
 		/*!
 			シミュレーションを開始してからの経過時間を求める
 		*/
-		float getDeltat() const;
+		double getDeltat() const;
 
 		//! A public member function (constant).
         /*!
@@ -65,6 +65,12 @@ namespace moleculardynamics {
 			格子定数を求める
 		*/
 		double getLatticeconst() const;
+		
+		//! A public member function (constant).
+		/*!
+			周期境界条件の長さを求める
+		*/
+		double getPeriodiclen() const;
 
         //! A public member function (constant).
         /*!
@@ -95,7 +101,7 @@ namespace moleculardynamics {
 			スーパーセルの大きさを設定する
 			\param Nc_ スーパーセルの大きさ
 		*/
-		void setNc(double Nc_);
+		void setNc(std::int32_t Nc);
 
 		//! A public member function.
 		/*!
@@ -151,6 +157,12 @@ namespace moleculardynamics {
 		
 		//! A property.
 		/*!
+			スーパーセルの個数へのプロパティ
+		*/
+		Property<std::int32_t> const Nc;
+
+		//! A property.
+		/*!
 			原子数へのプロパティ
 		*/
 		Property<std::int32_t> const NumAtom;
@@ -184,6 +196,12 @@ namespace moleculardynamics {
         // #region メンバ変数
 
 	public:
+		//! A private member variable (constant).
+		/*!
+			初期のスーパーセルの個数
+		*/
+		static auto const FIRSTNC = 5;
+
 		//! A private member variable (constant).
 		/*!
 			初期の格子定数のスケール
@@ -255,7 +273,7 @@ namespace moleculardynamics {
 		/*!
 			スーパーセルの個数
 		*/
-		std::int32_t Nc_ = 5;
+		std::int32_t Nc_ = Ar_moleculardynamics::FIRSTNC;
 
 		//! A private member variable.
 		/*!

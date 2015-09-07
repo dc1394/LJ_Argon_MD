@@ -21,6 +21,39 @@
 #include <boost/format.hpp>							// for boost::wformat
 #include <boost/range/algorithm/max_element.hpp>	// for boost::max_element
 
+//! A function.
+/*!
+	UIに変更があったときに呼ばれるコールバック関数
+*/
+void CALLBACK OnGUIEvent(UINT nEvent, int nControlID, CDXUTControl* pControl, void* pUserContext);
+
+//! A function.
+/*!
+	球のメッシュを生成する
+	\param pd3dDevice Direct3Dのデバイス
+*/
+void CreateSphereMesh(ID3D10Device* pd3dDevice);
+
+//! A function.
+/*!
+	箱を描画する
+	\param pd3dDevice Direct3Dのデバイス
+*/
+void RenderBox(ID3D10Device* pd3dDevice);
+
+//! A function.
+/*!
+	画面の左上に情報を表示する
+	\param pd3dDevice Direct3Dのデバイス
+*/
+void RenderText(ID3D10Device* pd3dDevice);
+
+//! A function.
+/*!
+	UIを配置する
+*/
+void SetUI();
+
 //! A global variable (constant).
 /*!
 	色の比率
@@ -73,7 +106,7 @@ moleculardynamics::Ar_moleculardynamics armd;
 /*!
     箱の色
 */
-D3DXVECTOR4 BoxColor(1.0f, 1.0f, 1.0f, 1.0f);
+D3DXVECTOR4 boxColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 //! A global variable.
 /*!
@@ -83,9 +116,27 @@ D3D10_BUFFER_DESC bd;
 
 //! A global variable.
 /*!
+	背景の色
+*/
+D3DXVECTOR4 clearColor(0.176f, 0.196f, 0.667f, 1.0f);
+
+//! A global variable.
+/*!
     Font for drawing text
 */
 std::unique_ptr<ID3DX10Font, utility::Safe_Release<ID3DX10Font>> font;
+
+//! A global variable.
+/*!
+	格子定数が変更されたことを通知するフラグ
+*/
+bool modLatconst = false;
+
+//! A global variable.
+/*!
+	スーパーセルが変更されたことを通知するフラグ
+*/
+bool modNc = false;
 
 //! A global variable.
 /*!
@@ -127,7 +178,7 @@ std::unique_ptr<ID3D10Buffer, utility::Safe_Release<ID3D10Buffer>> pVertexBuffer
 /*!
     球の色
 */
-D3DXVECTOR4 SphereColor(1.0f, 0.0f, 1.0f, 1.0f);
+D3DXVECTOR4 sphereColor(1.0f, 0.0f, 1.0f, 1.0f);
 
 //! A global variable.
 /*!
@@ -197,6 +248,14 @@ ID3D10EffectMatrixVariable* g_pWorldVariable = nullptr;
 D3DXMATRIX g_View;
 
 //--------------------------------------------------------------------------------------
+// Structures
+//--------------------------------------------------------------------------------------
+struct SimpleVertex
+{
+	D3DXVECTOR3 Pos;
+};
+
+//--------------------------------------------------------------------------------------
 // UI control IDs
 //--------------------------------------------------------------------------------------
 #define IDC_TOGGLEFULLSCREEN    1
@@ -205,22 +264,10 @@ D3DXMATRIX g_View;
 #define IDC_RECALC              4
 #define IDC_OUTPUT				5
 #define IDC_OUTPUT2				6
-#define IDC_SLIDER				7
-#define IDC_SLIDER2				8
-
-void CALLBACK OnGUIEvent(UINT nEvent, int nControlID, CDXUTControl* pControl, void* pUserContext);
-
-//! A function.
-/*!
-    画面の左上に情報を表示する
-*/
-void RenderText(ID3D10Device* pd3dDevice, double fTime);
-
-//! A function.
-/*!
-    UIを配置する
-*/
-void SetUI();
+#define IDC_OUTPUT3				7
+#define IDC_SLIDER				8
+#define IDC_SLIDER2				9
+#define IDC_SLIDER3				10
 
 //--------------------------------------------------------------------------------------
 // Initialize the app 
@@ -235,20 +282,6 @@ void InitApp()
     SetUI();
 }
 
-//! A function.
-/*!
-    UIを配置する
-*/
-void SetUI();
-
-//--------------------------------------------------------------------------------------
-// Structures
-//--------------------------------------------------------------------------------------
-struct SimpleVertex
-{
-    D3DXVECTOR3 Pos;
-};
-
 //--------------------------------------------------------------------------------------
 // Render the scene using the D3D10 device
 //--------------------------------------------------------------------------------------
@@ -256,75 +289,30 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
 {
     if (g_D3DSettingsDlg.IsActive())
     {
-        std::array<float, 4> const ClearColor = { 0.176f, 0.196f, 0.667f, 1.0f };
         auto pRTV = DXUTGetD3D10RenderTargetView();
-        pd3dDevice->ClearRenderTargetView(pRTV, ClearColor.data());
+        pd3dDevice->ClearRenderTargetView(pRTV, clearColor);
 
         g_D3DSettingsDlg.OnRender(fElapsedTime);
         return;
     }
     else
     {
-		auto const pos = boost::numeric_cast<float>(armd.periodiclen()) * 0.5f;
+		if (modLatconst) {
+			RenderBox(pd3dDevice);
+			modLatconst = false;
+		}
 
-		// Create vertex buffer
-		std::array<SimpleVertex, NUMVERTEXBUFFER> const vertices =
-		{
-			D3DXVECTOR3(-pos, pos, -pos),
-			D3DXVECTOR3(pos, pos, -pos),
-			D3DXVECTOR3(pos, pos, pos),
-			D3DXVECTOR3(-pos, pos, pos),
-
-			D3DXVECTOR3(-pos, -pos, -pos),
-			D3DXVECTOR3(pos, -pos, -pos),
-			D3DXVECTOR3(pos, -pos, pos),
-			D3DXVECTOR3(-pos, -pos, pos),
-		};
-
-		bd.Usage = D3D10_USAGE_DEFAULT;
-		bd.ByteWidth = sizeof(SimpleVertex) * NUMVERTEXBUFFER;
-		bd.BindFlags = D3D10_BIND_VERTEX_BUFFER;
-		bd.CPUAccessFlags = 0;
-		bd.MiscFlags = 0;
-
-		D3D10_SUBRESOURCE_DATA InitData;
-		InitData.pSysMem = vertices.data();
-
-		ID3D10Buffer * pVertexBuffertmp;
-		utility::v_return(pd3dDevice->CreateBuffer(&bd, &InitData, &pVertexBuffertmp));
-		pVertexBuffer.reset(pVertexBuffertmp);
-
-		// Create index buffer
-		// Create vertex buffer
-		std::array<DWORD, NUMINDEXBUFFER> const indices =
-		{
-			0, 1, 2,
-			3, 0, 4,
-
-			5, 1, 2,
-			6, 5, 4,
-
-			7, 3, 7,
-			6
-		};
-
-		bd.Usage = D3D10_USAGE_DEFAULT;
-		bd.ByteWidth = sizeof(DWORD) * NUMINDEXBUFFER;
-		bd.BindFlags = D3D10_BIND_INDEX_BUFFER;
-		bd.CPUAccessFlags = 0;
-		bd.MiscFlags = 0;
-		InitData.pSysMem = indices.data();
-
-		ID3D10Buffer * pIndexBuffertmp;
-		utility::v_return(pd3dDevice->CreateBuffer(&bd, &InitData, &pIndexBuffertmp));
-		pIndexBuffer.reset(pIndexBuffertmp);
+		if (modNc) {
+			CreateSphereMesh(pd3dDevice);
+			RenderBox(pd3dDevice);
+			modNc = false;
+		}
 
         armd.Calc_Forces();
         armd.Move_Atoms();
 
         // Clear render target and the depth stencil 
-        std::array<float, 4> const ClearColor = { 0.176f, 0.196f, 0.667f, 1.0f };
-        pd3dDevice->ClearRenderTargetView(DXUTGetD3D10RenderTargetView(), ClearColor.data());
+        pd3dDevice->ClearRenderTargetView(DXUTGetD3D10RenderTargetView(), clearColor);
         pd3dDevice->ClearDepthStencilView(DXUTGetD3D10DepthStencilView(), D3D10_CLEAR_DEPTH, 1.0, 0);
 
         // Update variables
@@ -335,7 +323,7 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
         D3D10_TECHNIQUE_DESC techDesc;
         g_pRender->GetDesc(&techDesc);
 
-        g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&BoxColor));
+        g_pColorVariable->SetFloatVector(boxColor);
 
         // Set vertex buffer
         auto const stride = sizeof(SimpleVertex);
@@ -355,13 +343,14 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
             pd3dDevice->DrawIndexed(NUMINDEXBUFFER, 0, 0);
         }
 
+		auto const pos = boost::numeric_cast<float>(armd.periodiclen()) * 0.5f;
         auto const size = pmeshvec.size();
 
         for (auto i = 0U; i < size; i++) {
-            auto color = SphereColor;
+            auto color = sphereColor;
 			auto const rcolor = COLORRATIO * armd.getForce(i);
             color.x = rcolor > 1.0f ? 1.0f : rcolor;
-            g_pColorVariable->SetFloatVector(reinterpret_cast<float *>(&color));
+            g_pColorVariable->SetFloatVector(color);
 
             D3DXMATRIX World;
             D3DXMatrixTranslation(
@@ -390,7 +379,7 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
 
         DXUT_BeginPerfEvent(DXUT_PERFEVENTCOLOR, L"HUD / Stats");
         g_HUD.OnRender(fElapsedTime);
-        RenderText(pd3dDevice, fTime);
+        RenderText(pd3dDevice);
         DXUT_EndPerfEvent();
     }
 }
@@ -497,12 +486,8 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
     pd3dDevice->CreateBlendState(&BlendState, &pBlendStateNoBlendtmp);
     pBlendStateNoBlend.reset(pBlendStateNoBlendtmp);
 
-    pmeshvec.resize(armd.X().size());
-    for (auto & pmesh : pmeshvec) {
-        ID3DX10Mesh * pmeshtmp = nullptr;
-        DXUTCreateSphere(pd3dDevice, 0.2f, 16, 16, &pmeshtmp);
-        pmesh.reset(pmeshtmp);
-    }
+	RenderBox(pd3dDevice);
+	CreateSphereMesh(pd3dDevice);
 
     D3DXVECTOR3 vEye(0.0f, 10.0f, 10.0f);
 	D3DXVECTOR3 vLook(0.0f, 0.0f, 0.0f);
@@ -569,11 +554,17 @@ void CALLBACK OnGUIEvent(UINT nEvent, int nControlID, CDXUTControl* pControl, vo
         break;
 
     case IDC_SLIDER:
-        armd.setTgiven(static_cast<double>((reinterpret_cast<CDXUTSlider*>(pControl))->GetValue()));
+        armd.setTgiven(static_cast<double>((reinterpret_cast<CDXUTSlider *>(pControl))->GetValue()));
         break;
 
 	case IDC_SLIDER2:
-		armd.setScale(static_cast<double>((reinterpret_cast<CDXUTSlider*>(pControl))->GetValue()) / LATTICERATIO);
+		armd.setScale(static_cast<double>((reinterpret_cast<CDXUTSlider *>(pControl))->GetValue()) / LATTICERATIO);
+		modLatconst = true;
+		break;
+
+	case IDC_SLIDER3:
+		armd.setNc(reinterpret_cast<CDXUTSlider *>(pControl)->GetValue());
+		modNc = true;
 		break;
 
     default:
@@ -664,22 +655,123 @@ bool CALLBACK OnDeviceRemoved( void* pUserContext )
     return true;
 }
 
+void CreateSphereMesh(ID3D10Device* pd3dDevice)
+{
+	auto const size = armd.X().size();
+	BOOST_ASSERT(size == armd.Y().size());
+	BOOST_ASSERT(size == armd.Z().size());
+
+	pmeshvec.resize(size);
+	for (auto & pmesh : pmeshvec) {
+		ID3DX10Mesh * pmeshtmp = nullptr;
+		DXUTCreateSphere(pd3dDevice, 0.2f, 16, 16, &pmeshtmp);
+		pmesh.reset(pmeshtmp);
+	}
+}
+
+void RenderBox(ID3D10Device* pd3dDevice)
+{
+	auto const pos = boost::numeric_cast<float>(armd.periodiclen()) * 0.5f;
+
+	// Create vertex buffer
+	std::array<SimpleVertex, NUMVERTEXBUFFER> const vertices =
+	{
+		D3DXVECTOR3(-pos, pos, -pos),
+		D3DXVECTOR3(pos, pos, -pos),
+		D3DXVECTOR3(pos, pos, pos),
+		D3DXVECTOR3(-pos, pos, pos),
+
+		D3DXVECTOR3(-pos, -pos, -pos),
+		D3DXVECTOR3(pos, -pos, -pos),
+		D3DXVECTOR3(pos, -pos, pos),
+		D3DXVECTOR3(-pos, -pos, pos),
+	};
+
+	bd.Usage = D3D10_USAGE_DEFAULT;
+	bd.ByteWidth = sizeof(SimpleVertex) * NUMVERTEXBUFFER;
+	bd.BindFlags = D3D10_BIND_VERTEX_BUFFER;
+	bd.CPUAccessFlags = 0;
+	bd.MiscFlags = 0;
+
+	D3D10_SUBRESOURCE_DATA InitData;
+	InitData.pSysMem = vertices.data();
+
+	ID3D10Buffer * pVertexBuffertmp;
+	utility::v_return(pd3dDevice->CreateBuffer(&bd, &InitData, &pVertexBuffertmp));
+	pVertexBuffer.reset(pVertexBuffertmp);
+
+	// Create index buffer
+	// Create vertex buffer
+	std::array<DWORD, NUMINDEXBUFFER> const indices =
+	{
+		0, 1, 2,
+		3, 0, 4,
+
+		5, 1, 2,
+		6, 5, 4,
+
+		7, 3, 7,
+		6
+	};
+
+	bd.Usage = D3D10_USAGE_DEFAULT;
+	bd.ByteWidth = sizeof(DWORD) * NUMINDEXBUFFER;
+	bd.BindFlags = D3D10_BIND_INDEX_BUFFER;
+	bd.CPUAccessFlags = 0;
+	bd.MiscFlags = 0;
+	InitData.pSysMem = indices.data();
+
+	ID3D10Buffer * pIndexBuffertmp;
+	utility::v_return(pd3dDevice->CreateBuffer(&bd, &InitData, &pIndexBuffertmp));
+	pIndexBuffer.reset(pIndexBuffertmp);
+}
+
+//--------------------------------------------------------------------------------------
+// Render the help and statistics text
+//--------------------------------------------------------------------------------------
+void RenderText(ID3D10Device* pd3dDevice)
+{
+    txthelper->Begin();
+    txthelper->SetInsertionPos(2, 0);
+    txthelper->SetForegroundColor(D3DXCOLOR(1.000f, 0.945f, 0.059f, 1.000f));
+    txthelper->DrawTextLine(DXUTGetFrameStats(DXUTIsVsyncEnabled()));
+    txthelper->DrawTextLine(DXUTGetDeviceStats());
+    //txthelper->DrawTextLine((boost::wformat(L"CPUスレッド数: %d") % cputhread).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"原子数: %d") % armd.NumAtom).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"スーパーセルの個数: %d") % armd.Nc).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"MDのステップ数: %d") % armd.MD_iter).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"経過時間: %.3f (ps)") % armd.getDeltat()).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"格子定数: %.3f (Å)") % armd.getLatticeconst()).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"箱の一辺の長さ: %.3f (Å)")  % armd.getPeriodiclen()).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"設定された温度: %.3f (K)") % armd.getTgiven()).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"計算された温度: %.3f (K)") % armd.getTcalc()).str().c_str());
+	txthelper->DrawTextLine(L"原子の色の違いは働いている力の違いを表す");
+	txthelper->DrawTextLine(L"赤色に近いほどその原子に働いている力が強い");
+	txthelper->End();
+    pd3dDevice->IASetInputLayout(pInputLayout.get());
+
+    auto const blendFactor = 0.0f;
+    auto sampleMask = 0xffffffff;
+
+    pd3dDevice->OMSetBlendState(pBlendStateNoBlend.get(), &blendFactor, sampleMask);
+}
+
 void SetUI()
 {
-    g_HUD.RemoveAllControls();
+	g_HUD.RemoveAllControls();
 
-    std::int32_t iY = 10;
+	std::int32_t iY = 10;
 
-    g_HUD.AddButton(IDC_TOGGLEFULLSCREEN, L"Toggle full screen", 35, iY, 125, 22);
-    g_HUD.AddButton(IDC_CHANGEDEVICE, L"Change device (F2)", 35, iY += 24, 125, 22, VK_F2);
-    g_HUD.AddButton(IDC_TOGGLEROTATION, L"Toggle Rotaion Animation", 35, iY += 24, 125, 22);
+	g_HUD.AddButton(IDC_TOGGLEFULLSCREEN, L"Toggle full screen", 35, iY, 125, 22);
+	g_HUD.AddButton(IDC_CHANGEDEVICE, L"Change device (F2)", 35, iY += 24, 125, 22, VK_F2);
+	g_HUD.AddButton(IDC_TOGGLEROTATION, L"Toggle Rotaion Animation", 35, iY += 24, 125, 22);
 
-    g_HUD.AddButton(IDC_RECALC, L"再計算", 35, iY += 34, 125, 22);
+	g_HUD.AddButton(IDC_RECALC, L"再計算", 35, iY += 34, 125, 22);
 
-    // 温度の変更
-    g_HUD.AddStatic(IDC_OUTPUT, L"温度", 20, iY += 34, 125, 22);
-    g_HUD.GetStatic(IDC_OUTPUT)->SetTextColor(D3DCOLOR_ARGB(255, 255, 255, 255));
-    g_HUD.AddSlider(
+	// 温度の変更
+	g_HUD.AddStatic(IDC_OUTPUT, L"温度", 20, iY += 34, 125, 22);
+	g_HUD.GetStatic(IDC_OUTPUT)->SetTextColor(D3DCOLOR_ARGB(255, 255, 255, 255));
+	g_HUD.AddSlider(
 		IDC_SLIDER,
 		35,
 		iY += 24,
@@ -701,32 +793,20 @@ void SetUI()
 		30,
 		100,
 		boost::numeric_cast<int>(moleculardynamics::Ar_moleculardynamics::FIRSTSCALE * LATTICERATIO));
-}
 
-//--------------------------------------------------------------------------------------
-// Render the help and statistics text
-//--------------------------------------------------------------------------------------
-void RenderText(ID3D10Device* pd3dDevice, double fTime)
-{
-    txthelper->Begin();
-    txthelper->SetInsertionPos(2, 0);
-    txthelper->SetForegroundColor(D3DXCOLOR(1.000f, 0.945f, 0.059f, 1.000f));
-    txthelper->DrawTextLine(DXUTGetFrameStats(DXUTIsVsyncEnabled()));
-    txthelper->DrawTextLine(DXUTGetDeviceStats());
-    //txthelper->DrawTextLine((boost::wformat(L"CPUスレッド数: %d") % cputhread).str().c_str());
-	txthelper->DrawTextLine((boost::wformat(L"原子数: %d") % armd.NumAtom).str().c_str());
-	txthelper->DrawTextLine((boost::wformat(L"MDのステップ数: %d") % armd.MD_iter).str().c_str());
-	txthelper->DrawTextLine((boost::wformat(L"経過時間: %.3f (ps)") % armd.getDeltat()).str().c_str());
-	txthelper->DrawTextLine((boost::wformat(L"格子定数: %.3f (Å)") % armd.getLatticeconst()).str().c_str());
-	txthelper->DrawTextLine((boost::wformat(L"設定された温度: %.1f (K)") % armd.getTgiven()).str().c_str());
-	txthelper->DrawTextLine((boost::wformat(L"計算された温度: %.1f (K)") % armd.getTcalc()).str().c_str());
-	txthelper->End();
-    pd3dDevice->IASetInputLayout(pInputLayout.get());
+	// スーパーセルの個数の変更
+	g_HUD.AddStatic(IDC_OUTPUT3, L"スーパーセルの個数", 20, iY += 34, 125, 22);
+	g_HUD.GetStatic(IDC_OUTPUT3)->SetTextColor(D3DCOLOR_ARGB(255, 255, 255, 255));
+	g_HUD.AddSlider(
+		IDC_SLIDER3,
+		35,
+		iY += 24,
+		125,
+		22,
+		1,
+		7,
+		moleculardynamics::Ar_moleculardynamics::FIRSTNC);
 
-    auto const blendFactor = 0.0f;
-    auto sampleMask = 0xffffffff;
-
-    pd3dDevice->OMSetBlendState(pBlendStateNoBlend.get(), &blendFactor, sampleMask);
 }
 
 //--------------------------------------------------------------------------------------
