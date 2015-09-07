@@ -125,4 +125,7 @@
       <Filter>document</Filter>
     </Text>
   </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="LJ_Argon_MD.fx" />
+  </ItemGroup>
 </Project>
