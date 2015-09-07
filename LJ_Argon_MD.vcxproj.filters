@@ -8,10 +8,6 @@
     <Filter Include="DXUT">
       <UniqueIdentifier>{a43c5c25-0e86-4a20-b64a-883785ff74fd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders">
-      <UniqueIdentifier>{2c3d4c8c-5d1a-459a-a05a-a4e4b608a44e}</UniqueIdentifier>
-      <Extensions>fx;fxh;hlsl</Extensions>
-    </Filter>
     <Filter Include="utility">
       <UniqueIdentifier>{1ec3c0c7-cd94-423d-9f39-48d59fa8acf7}</UniqueIdentifier>
     </Filter>
@@ -89,11 +85,6 @@
     <ClCompile Include="DXUT\Optional\DXUTShapes.cpp">
       <Filter>DXUT</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="MultiMon10.fx">
-      <Filter>Shaders</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <CLInclude Include="resource.h">
