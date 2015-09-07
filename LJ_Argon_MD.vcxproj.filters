@@ -105,9 +105,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LJ_Argon_MD.cpp" />
-    <ClCompile Include="utility\utility.cpp">
-      <Filter>utility</Filter>
-    </ClCompile>
     <ClCompile Include="moleculardynamics\Ar_moleculardynamics.cpp">
       <Filter>moleculardynamics</Filter>
     </ClCompile>
@@ -124,8 +121,5 @@
     <Text Include="document\readme.txt">
       <Filter>document</Filter>
     </Text>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="LJ_Argon_MD.fx" />
   </ItemGroup>
 </Project>
