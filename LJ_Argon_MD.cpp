@@ -20,6 +20,7 @@
 #include <boost/cast.hpp>							// for boost::numeric_cast
 #include <boost/format.hpp>							// for boost::wformat
 #include <boost/range/algorithm/max_element.hpp>	// for boost::max_element
+#include <tbb/task_scheduler_init.h>				// for tbb::task_scheduler_init
 
 //! A function.
 /*!
@@ -101,6 +102,12 @@ static auto const WINDOWWIDTH = 1280;
     分子動力学シミュレーションのオブジェクト
 */
 moleculardynamics::Ar_moleculardynamics armd;
+
+//! A global variable.
+/*!
+	CPUのスレッド数
+*/
+auto const cputhread = tbb::task_scheduler_init::default_num_threads();
 
 //! A global variable.
 /*!
@@ -260,14 +267,13 @@ struct SimpleVertex
 //--------------------------------------------------------------------------------------
 #define IDC_TOGGLEFULLSCREEN    1
 #define IDC_CHANGEDEVICE        2
-#define IDC_TOGGLEROTATION      3
-#define IDC_RECALC              4
-#define IDC_OUTPUT				5
-#define IDC_OUTPUT2				6
-#define IDC_OUTPUT3				7
-#define IDC_SLIDER				8
-#define IDC_SLIDER2				9
-#define IDC_SLIDER3				10
+#define IDC_RECALC              3
+#define IDC_OUTPUT				4
+#define IDC_OUTPUT2				5
+#define IDC_OUTPUT3				6
+#define IDC_SLIDER				7
+#define IDC_SLIDER2				8
+#define IDC_SLIDER3				9
 
 //--------------------------------------------------------------------------------------
 // Initialize the app 
@@ -545,10 +551,6 @@ void CALLBACK OnGUIEvent(UINT nEvent, int nControlID, CDXUTControl* pControl, vo
         g_D3DSettingsDlg.SetActive(!g_D3DSettingsDlg.IsActive());
         break;
 
-    case IDC_TOGGLEROTATION:
-        //ROT_FLAG = !ROT_FLAG;
-        break;
-
     case IDC_RECALC:
         armd.recalc();
         break;
@@ -736,7 +738,7 @@ void RenderText(ID3D10Device* pd3dDevice)
     txthelper->SetForegroundColor(D3DXCOLOR(1.000f, 0.945f, 0.059f, 1.000f));
     txthelper->DrawTextLine(DXUTGetFrameStats(DXUTIsVsyncEnabled()));
     txthelper->DrawTextLine(DXUTGetDeviceStats());
-    //txthelper->DrawTextLine((boost::wformat(L"CPUスレッド数: %d") % cputhread).str().c_str());
+    txthelper->DrawTextLine((boost::wformat(L"CPUスレッド数: %d") % cputhread).str().c_str());
 	txthelper->DrawTextLine((boost::wformat(L"原子数: %d") % armd.NumAtom).str().c_str());
 	txthelper->DrawTextLine((boost::wformat(L"スーパーセルの個数: %d") % armd.Nc).str().c_str());
 	txthelper->DrawTextLine((boost::wformat(L"MDのステップ数: %d") % armd.MD_iter).str().c_str());
@@ -764,7 +766,6 @@ void SetUI()
 
 	g_HUD.AddButton(IDC_TOGGLEFULLSCREEN, L"Toggle full screen", 35, iY, 125, 22);
 	g_HUD.AddButton(IDC_CHANGEDEVICE, L"Change device (F2)", 35, iY += 24, 125, 22, VK_F2);
-	g_HUD.AddButton(IDC_TOGGLEROTATION, L"Toggle Rotaion Animation", 35, iY += 24, 125, 22);
 
 	g_HUD.AddButton(IDC_RECALC, L"再計算", 35, iY += 34, 125, 22);
 

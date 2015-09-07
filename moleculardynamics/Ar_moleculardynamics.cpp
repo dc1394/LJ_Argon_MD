@@ -307,21 +307,13 @@ namespace moleculardynamics {
 		Z_.resize(Nc_ * Nc_ * Nc_ * 4);
 		Z1.resize(Nc_ * Nc_ * Nc_ * 4);
 
-		lat_ = std::pow(2.0, 2.0 / 3.0) * scale_;
-
-		recalc();
-
-		periodiclen_ = lat_ * static_cast<double>(Nc_);
+		ModLattice();
 	}
 
 	void Ar_moleculardynamics::setScale(double scale)
 	{
 		scale_ = scale;
-		lat_ = std::pow(2.0, 2.0 / 3.0) * scale_;
-
-		recalc();
-
-		periodiclen_ = lat_ * static_cast<double>(Nc_);
+		ModLattice();
 	}
 
 	void Ar_moleculardynamics::setTgiven(double Tgiven)
@@ -436,6 +428,13 @@ namespace moleculardynamics {
 			VY[n] -= sy;
 			VZ[n] -= sz;
 		}
+	}
+
+	void Ar_moleculardynamics::ModLattice()
+	{
+		lat_ = std::pow(2.0, 2.0 / 3.0) * scale_;
+		recalc();
+		periodiclen_ = lat_ * static_cast<double>(Nc_);
 	}
 
 	double Ar_moleculardynamics::norm2(double x, double y, double z) const

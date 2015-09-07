@@ -89,12 +89,12 @@ namespace moleculardynamics {
             原子を移動させる
         */
         void Move_Atoms();
-
-        //! A public member function.
-        /*!
-            再計算する
-        */
-        void recalc();
+		
+		//! A oublic member function.
+		/*!
+			再計算する
+		*/
+		void recalc();
 
 		//! A public member function.
 		/*!
@@ -134,7 +134,13 @@ namespace moleculardynamics {
 		*/
 		void MD_initVel();
 
-		//! A public member function (constant).
+		//! A private member function.
+		/*!
+			格子定数が変更されたときに呼ばれる
+		*/
+		void ModLattice();
+
+		//! A private member function (constant).
 		/*!
 			ノルムの二乗を求める
 			\param x x座標
@@ -200,7 +206,7 @@ namespace moleculardynamics {
 		/*!
 			初期のスーパーセルの個数
 		*/
-		static auto const FIRSTNC = 5;
+		static auto const FIRSTNC = 4;
 
 		//! A private member variable (constant).
 		/*!
