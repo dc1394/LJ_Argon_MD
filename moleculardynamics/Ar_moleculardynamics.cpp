@@ -10,7 +10,6 @@
 #include "../myrandom/myrand.h"
 #include <tbb/parallel_for.h>           // for tbb::parallel_for
 #include <tbb/partitioner.h>            // for tbb::auto_partitioner
-#include <tbb/task_scheduler_init.h>    // for tbb::task_scheduler_init
 
 namespace moleculardynamics {
     // #region static private 定数
@@ -72,8 +71,6 @@ namespace moleculardynamics {
         recalc();
 
 		periodiclen_ = lat_ * static_cast<double>(Nc_);
-		
-		tbb::task_scheduler_init init;
 	}
 
 	// #endregion コンストラクタ
@@ -87,7 +84,6 @@ namespace moleculardynamics {
             FY[n] = 0.0;
             FZ[n] = 0.0;
         }
-
 
 		tbb::parallel_for(
 			0,
