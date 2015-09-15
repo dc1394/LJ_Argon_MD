@@ -42,6 +42,7 @@ namespace moleculardynamics {
 
 		// #region publicメンバ関数
 
+        template <UseAVX E>
         //! A public member function.
         /*!
             原子に働く力を計算する
@@ -122,6 +123,12 @@ namespace moleculardynamics {
 		// #region privateメンバ関数
 
 	private:
+        //! A private member function.
+        /*!
+            AVX命令が使えるかどうか
+        */
+        bool availableAVX() const;
+
 		//! A private member function.
 		/*!
 			原子の初期位置を決める
