@@ -314,8 +314,14 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
 			modNc = false;
 		}
 
-        armd.Calc_Forces<moleculardynamics::UseAVX::False>();
-		armd.Move_Atoms<moleculardynamics::UseAVX::False>();
+		if (armd.useavx) {
+			armd.Calc_Forces<moleculardynamics::UseAVX::True>();
+			armd.Move_Atoms<moleculardynamics::UseAVX::True>();
+		}
+		else {
+			armd.Calc_Forces<moleculardynamics::UseAVX::False>();
+			armd.Move_Atoms<moleculardynamics::UseAVX::False>();
+		}
 
         // Clear render target and the depth stencil 
         pd3dDevice->ClearRenderTargetView(DXUTGetD3D10RenderTargetView(), clearColor);
@@ -359,11 +365,20 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
             g_pColorVariable->SetFloatVector(color);
 
             D3DXMATRIX World;
-            D3DXMatrixTranslation(
-                &World,
-                boost::numeric_cast<float>(armd.X()[i]) - pos,
-                boost::numeric_cast<float>(armd.Y()[i]) - pos,
-                boost::numeric_cast<float>(armd.Z()[i]) - pos);
+			if (armd.useavx) {
+				D3DXMatrixTranslation(
+					&World,
+					boost::numeric_cast<float>(armd.C()[i][0]) - pos,
+					boost::numeric_cast<float>(armd.C()[i][1]) - pos,
+					boost::numeric_cast<float>(armd.C()[i][2]) - pos);
+			}
+			else {
+				D3DXMatrixTranslation(
+					&World,
+					boost::numeric_cast<float>(armd.X()[i]) - pos,
+					boost::numeric_cast<float>(armd.Y()[i]) - pos,
+					boost::numeric_cast<float>(armd.Z()[i]) - pos);
+			}
             D3DXMatrixMultiply(&World, &(*g_Camera.GetWorldMatrix()), &World);
 
             // Update variables
