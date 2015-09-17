@@ -77,7 +77,8 @@ namespace moleculardynamics {
 
     // #region publicメンバ関数
 
-    void Ar_moleculardynamics::Calc_Forces()
+	template <>
+	void Ar_moleculardynamics::Calc_Forces<UseAVX::False>()
     {
         for (auto n = 0; n < NumAtom_; n++) {
             FX[n] = 0.0;
@@ -160,7 +161,8 @@ namespace moleculardynamics {
 		return Ar_moleculardynamics::YPSILON / Ar_moleculardynamics::KB * Tg_;
     }
 
-    void Ar_moleculardynamics::Move_Atoms()
+	template<>
+	void Ar_moleculardynamics::Move_Atoms<UseAVX::False>()
     {
         // calculate temperture
         auto Uk = 0.0;
@@ -458,4 +460,7 @@ namespace moleculardynamics {
 	}
 
 	// #endregion privateメンバ関数
+	
+	template void Ar_moleculardynamics::Calc_Forces<UseAVX::False>();
+	template void Ar_moleculardynamics::Move_Atoms<UseAVX::False>();
 }

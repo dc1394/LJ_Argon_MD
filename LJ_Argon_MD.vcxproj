@@ -390,6 +390,7 @@ copy document\readme.txt Release</Command>
     <ClCompile Include="moleculardynamics\Ar_moleculardynamics.cpp" />
     <ClCompile Include="myrandom\myrand.cpp" />
     <ClInclude Include="moleculardynamics\Ar_moleculardynamics.h" />
+    <ClInclude Include="moleculardynamics\useavx.h" />
     <ClInclude Include="myrandom\myrand.h" />
     <ClInclude Include="utility\property.h" />
     <ClInclude Include="utility\utility.h" />

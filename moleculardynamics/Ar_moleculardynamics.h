@@ -11,6 +11,7 @@
 #pragma once
 
 #include "../utility/property.h"
+#include "useavx.h"
 #include <array>					// for std::array
 #include <cstdint>					// for std::int32_t
 #include <vector>					// for std::vector
@@ -42,7 +43,7 @@ namespace moleculardynamics {
 
 		// #region publicメンバ関数
 
-        template <UseAVX E>
+        template <UseAVX U>
         //! A public member function.
         /*!
             原子に働く力を計算する
@@ -85,6 +86,7 @@ namespace moleculardynamics {
         */
         double getTgiven() const;
 
+		template <UseAVX U>
         //! A public member function.
         /*!
             原子を移動させる

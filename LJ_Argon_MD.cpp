@@ -314,8 +314,8 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
 			modNc = false;
 		}
 
-        armd.Calc_Forces();
-        armd.Move_Atoms();
+        armd.Calc_Forces<moleculardynamics::UseAVX::False>();
+		armd.Move_Atoms<moleculardynamics::UseAVX::False>();
 
         // Clear render target and the depth stencil 
         pd3dDevice->ClearRenderTargetView(DXUTGetD3D10RenderTargetView(), clearColor);
@@ -753,7 +753,7 @@ void RenderText(ID3D10Device* pd3dDevice)
     pd3dDevice->IASetInputLayout(pInputLayout.get());
 
     auto const blendFactor = 0.0f;
-    auto sampleMask = 0xffffffff;
+    auto const sampleMask = 0xffffffff;
 
     pd3dDevice->OMSetBlendState(pBlendStateNoBlend.get(), &blendFactor, sampleMask);
 }
@@ -762,7 +762,7 @@ void SetUI()
 {
 	g_HUD.RemoveAllControls();
 
-	std::int32_t iY = 10;
+	auto iY = 10;
 
 	g_HUD.AddButton(IDC_TOGGLEFULLSCREEN, L"Toggle full screen", 35, iY, 125, 22);
 	g_HUD.AddButton(IDC_CHANGEDEVICE, L"Change device (F2)", 35, iY += 24, 125, 22, VK_F2);
