@@ -62,7 +62,7 @@ namespace moleculardynamics {
 		rcm6_(std::pow(rc_, -6.0)),
 		rcm12_(std::pow(rc_, -12.0)),
 		Tg_(Ar_moleculardynamics::FIRSTTEMP * Ar_moleculardynamics::KB / Ar_moleculardynamics::YPSILON),
-		useavx_(true),
+		useavx_(false),
 		Vrc_(4.0 * (rcm12_ - rcm6_)),
 		V_(Nc_ * Nc_ * Nc_ * 4),
 		VX_(Nc_ * Nc_ * Nc_ * 4),
@@ -91,7 +91,7 @@ namespace moleculardynamics {
 	void Ar_moleculardynamics::Calc_Forces<UseAVX::True>()
 	{
 		for (auto n = 0; n < NumAtom_; n++) {
-			F_[n] = Ar_moleculardynamics::pack_t(0.0, 0.0, 0.0, 0.0);
+			F_[n] = boost::simd::splat<Ar_moleculardynamics::pack_t>(0.0);
 		}
 
 		tbb::parallel_for(
@@ -127,11 +127,9 @@ namespace moleculardynamics {
 									auto const Fr = 48.0 * rm13 - 24.0 * rm7;
 									auto const Frdivr = Fr / r;
 
-									Ar_moleculardynamics::pack_t fr(Frdivr, Frdivr, Frdivr, 0.0);
-
 									Ar_moleculardynamics::pack_t p(dx, dy, dz, 0.0);
 
-									F_[n] += p * fr;
+									F_[n] += p * boost::simd::splat<Ar_moleculardynamics::pack_t>(Frdivr);
 								}
 							}
 						}
