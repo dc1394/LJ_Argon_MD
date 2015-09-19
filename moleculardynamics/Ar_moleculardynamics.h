@@ -299,12 +299,6 @@ namespace moleculardynamics {
 		
 		//! A private member variable (constant).
 		/*!
-			時間刻みの二乗
-		*/
-		double const dt2_;
-
-		//! A private member variable (constant).
-		/*!
 			スーパーセルの個数
 		*/
 		std::int32_t Nc_ = Ar_moleculardynamics::FIRSTNC;
@@ -320,6 +314,12 @@ namespace moleculardynamics {
 			n個目の原子の前の計算の座標
 		*/
 		std::vector<Ar_moleculardynamics::pack_t, boost::simd::allocator<Ar_moleculardynamics::pack_t>> C1_;
+		
+		//! A private member variable (constant).
+		/*!
+			時間刻みの二乗
+		*/
+		double const dt2_;
 
 		//! A private member variable.
 		/*!

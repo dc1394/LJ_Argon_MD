@@ -31,7 +31,7 @@ namespace utility {
         リソースを安全に解放するクラス
         \tparam T リソースの型
     */
-    struct Safe_Release final {
+    struct Safe_Release {
         //! A public member function.
         /*!
             リソースを安全に解放する
@@ -51,7 +51,7 @@ namespace utility {
         確保したメモリを安全に解放するクラス
         \tparam T 確保したメモリの型
     */
-    struct Safe_Delete final {
+    struct Safe_Delete {
         //! A public member function.
         /*!
             確保したメモリを安全に解放する

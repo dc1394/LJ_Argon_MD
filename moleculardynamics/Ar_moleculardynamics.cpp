@@ -467,9 +467,9 @@ namespace moleculardynamics {
 		}		
     }
 
-	void Ar_moleculardynamics::setNc(std::int32_t Nc)
+	void Ar_moleculardynamics::setNc(std::int32_t nc)
 	{
-		Nc_ = Nc;
+		Nc_ = nc;
 		F_.resize(Nc_ * Nc_ * Nc_ * 4);
 		
 		FX_.resize(Nc_ * Nc_ * Nc_ * 4);
@@ -522,7 +522,7 @@ namespace moleculardynamics {
         if (osUsesXSAVE_XRSTORE && cpuAVXSuport)
         {
             // Check if the OS will save the YMM registers
-            auto const xcrFeatureMask = ::_xgetbv(_XCR_XFEATURE_ENABLED_MASK);
+            auto const xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
             return (xcrFeatureMask & 0x6) || false;
         }
 #endif
