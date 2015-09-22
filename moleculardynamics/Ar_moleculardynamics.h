@@ -181,7 +181,7 @@ namespace moleculardynamics {
 		/*!
 			n番目の原子の座標へのプロパティ
 		*/
-		Property<std::vector<Ar_moleculardynamics::pack_t, boost::simd::allocator<Ar_moleculardynamics::pack_t>> const &> const C;
+		Property<std::vector<double, boost::simd::allocator<double>> const &> const C;
 
 		//! A property.
 		/*!
@@ -307,13 +307,13 @@ namespace moleculardynamics {
 		/*!
 			n個目の原子の座標
 		*/
-		std::vector<Ar_moleculardynamics::pack_t, boost::simd::allocator<Ar_moleculardynamics::pack_t>> C_;
+		std::vector<double, boost::simd::allocator<double>> C_;
 
 		//! A private member variable.
 		/*!
 			n個目の原子の前の計算の座標
 		*/
-		std::vector<Ar_moleculardynamics::pack_t, boost::simd::allocator<Ar_moleculardynamics::pack_t>> C1_;
+		std::vector<double, boost::simd::allocator<double>> C1_;
 		
 		//! A private member variable (constant).
 		/*!
@@ -325,7 +325,7 @@ namespace moleculardynamics {
 		/*!
 			n個目の原子に働く力のx成分
 		*/
-		std::vector<Ar_moleculardynamics::pack_t, boost::simd::allocator<Ar_moleculardynamics::pack_t>> F_;
+		std::vector<double, boost::simd::allocator<double>> F_;
 
 		//! A private member variable.
 		/*!
@@ -439,7 +439,7 @@ namespace moleculardynamics {
 		/*!
 			n個目の原子の速度
 		*/
-		std::vector<Ar_moleculardynamics::pack_t, boost::simd::allocator<Ar_moleculardynamics::pack_t>> V_;
+		std::vector<double, boost::simd::allocator<double>> V_;
 
 		//! A private member variable.
 		/*!

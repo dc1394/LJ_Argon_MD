@@ -9,6 +9,7 @@
 #include "Ar_moleculardynamics.h"
 #include <tbb/parallel_for.h>							// for tbb::parallel_for
 #include <tbb/partitioner.h>							// for tbb::auto_partitioner
+#include <boost/simd/memory/functions/aligned_store.hpp>
 #include <boost/simd/include/functions/divides.hpp>
 #include <boost/simd/include/functions/plus.hpp>
 #include <boost/simd/include/functions/sum.hpp>
@@ -51,10 +52,10 @@ namespace moleculardynamics {
 		X([this] { return std::cref(X_); }, nullptr),
 		Y([this] { return std::cref(Y_); }, nullptr),
 		Z([this] { return std::cref(Z_); }, nullptr),
-		C_(Nc_ * Nc_ * Nc_ * 4),
-		C1_(Nc_ * Nc_ * Nc_ * 4),
+		C_(Nc_ * Nc_ * Nc_ * 4 * 4),
+		C1_(Nc_ * Nc_ * Nc_ * 4 * 4),
 		dt2_(DT * DT),
-		F_(Nc_ * Nc_ * Nc_ * 4),
+		F_(Nc_ * Nc_ * Nc_ * 4 * 4),
 		FX_(Nc_ * Nc_ * Nc_ * 4),
 		FY_(Nc_ * Nc_ * Nc_ * 4),
 		FZ_(Nc_ * Nc_ * Nc_ * 4),
@@ -64,7 +65,7 @@ namespace moleculardynamics {
 		Tg_(Ar_moleculardynamics::FIRSTTEMP * Ar_moleculardynamics::KB / Ar_moleculardynamics::YPSILON),
 		useavx_(false),
 		Vrc_(4.0 * (rcm12_ - rcm6_)),
-		V_(Nc_ * Nc_ * Nc_ * 4),
+		V_(Nc_ * Nc_ * Nc_ * 4 * 4),
 		VX_(Nc_ * Nc_ * Nc_ * 4),
 		VY_(Nc_ * Nc_ * Nc_ * 4),
 		VZ_(Nc_ * Nc_ * Nc_ * 4),
@@ -91,7 +92,7 @@ namespace moleculardynamics {
 	void Ar_moleculardynamics::Calc_Forces<UseAVX::True>()
 	{
 		for (auto n = 0; n < NumAtom_; n++) {
-			F_[n] = boost::simd::splat<Ar_moleculardynamics::pack_t>(0.0);
+			boost::simd::aligned_store(0.0, &F_[n]);
 		}
 
 		tbb::parallel_for(
@@ -111,9 +112,9 @@ namespace moleculardynamics {
 
 							// 自分自身との相互作用を排除
 							if (n != m || i != 0 || j != 0 || k != 0) {
-								auto dx = C_[n][0] - (C_[m][0] + sx);
-								auto dy = C_[n][1] - (C_[m][1] + sy);
-								auto dz = C_[n][2] - (C_[m][2] + sz);
+								auto dx = C_[n << 2] - (C_[m << 2] + sx);
+								auto dy = C_[n << 2 + 1] - (C_[m << 2 + 1] + sy);
+								auto dz = C_[n << 2 + 2] - (C_[m << 2 + 2] + sz);
 
 								auto const r2 = norm2(dx, dy, dz);
 								// 打ち切り距離内であれば計算
@@ -129,7 +130,9 @@ namespace moleculardynamics {
 
 									Ar_moleculardynamics::pack_t p(dx, dy, dz, 0.0);
 
-									F_[n] += p * boost::simd::splat<Ar_moleculardynamics::pack_t>(Frdivr);
+									auto res = boost::simd::pack<pack_t>(F_[n]);
+									res += p * boost::simd::splat<Ar_moleculardynamics::pack_t>(Frdivr);
+									boost::simd::aligned_store(res, &F_[n]);
 								}
 							}
 						}
@@ -203,7 +206,8 @@ namespace moleculardynamics {
     float Ar_moleculardynamics::getForce(std::int32_t n) const
     {
 		auto const force =
-			useavx_ ? std::sqrt(norm2(F_[n][0], F_[n][1], F_[n][2])) : std::sqrt(norm2(FX_[n], FY_[n], FZ_[n]));
+			useavx_ ? std::sqrt(norm2(F_[n << 2], F_[n << 2 + 1], F_[n << 2 + 2])) :
+					  std::sqrt(norm2(FX_[n], FY_[n], FZ_[n]));
 
 		return static_cast<float>(force);
     }
@@ -235,7 +239,7 @@ namespace moleculardynamics {
 		auto Uk = 0.0;
 
 		for (auto n = 0; n < NumAtom_; n++) {
-			auto const v2 = norm2(V_[n][0], V_[n][1], V_[n][2]);
+			auto const v2 = norm2(V_[n << 2], V_[n << 2 + 1], V_[n << 2 + 2]);
 			Uk += v2;
 		}
 
@@ -256,15 +260,24 @@ namespace moleculardynamics {
 				NumAtom_,
 				1,
 				[this, s](std::int32_t n) {
-				C1_[n] = C_[n];
+				boost::simd::pack<pack_t> ctmp(&C_[n]);
+				boost::simd::aligned_store(ctmp, &C1_[n]);
+				//C1_[n] = C_[n];
 
 				// scaling of velocity
-				V_[n] *= s;
+				boost::simd::pack<pack_t> vtmp(&V_[n]);
+				vtmp *= s;
+				//V_[n] *= s;
 
 				// update coordinates and velocity
-				C_[n] += Ar_moleculardynamics::DT * V_[n] + 0.5 * F_[n] * dt2_;
-
-				V_[n] += Ar_moleculardynamics::DT * F_[n];
+				boost::simd::pack<pack_t> ftmp(&F_[n]);
+				ctmp += Ar_moleculardynamics::DT * vtmp + 0.5 * ftmp * dt2_;
+				boost::simd::aligned_store(ctmp, &C_[n]);
+				//C_[n] += Ar_moleculardynamics::DT * V_[n] + 0.5 * F_[n] * dt2_;
+				
+				vtmp += Ar_moleculardynamics::DT * ftmp;
+				boost::simd::aligned_store(vtmp, &V_[n]);
+				//V_[n] += Ar_moleculardynamics::DT * F_[n];
 
 			},
 				tbb::auto_partitioner());
@@ -278,15 +291,23 @@ namespace moleculardynamics {
 				NumAtom_,
 				1,
 				[this, s](std::int32_t n) {
-				auto const rtmp = C_[n];
+				boost::simd::pack<pack_t> ctmp(&C_[n]);
+				auto const cback = ctmp;
+				boost::simd::pack<pack_t> c1tmp(&C1_[n]);
+				boost::simd::pack<pack_t> ftmp(&F_[n]);
+				//auto const rtmp = C_[n];
 
 				// update coordinates and velocity
 				// Verlet法の座標更新式において速度成分を抜き出し、その部分をスケールする
-				C_[n] += s * (C_[n] - C1_[n]) + F_[n] * dt2_;
+				ctmp += s * (ctmp - c1tmp) + ftmp * dt2_;
+				boost::simd::aligned_store(ctmp, &C_[n]);
+				//C_[n] += s * (C_[n] - C1_[n]) + F_[n] * dt2_;
 
-				V_[n] = 0.5 * (C_[n] - C1_[n]) / Ar_moleculardynamics::DT;
+				boost::simd::aligned_store(0.5 * (ctmp - c1tmp) / Ar_moleculardynamics::DT, &V_[n]);
+				//V_[n] = 0.5 * (C_[n] - C1_[n]) / Ar_moleculardynamics::DT;
 
-				C1_[n] = rtmp;
+				boost::simd::aligned_store(cback, &C1_[n]);
+				//C1_[n] = rtmp;
 			},
 				tbb::auto_partitioner());
 			break;
@@ -299,29 +320,29 @@ namespace moleculardynamics {
 			NumAtom_,
 			1,
 			[this](std::int32_t n) {
-			if (C_[n][0] > periodiclen_) {
-				C_[n][0] -= periodiclen_;
-				C1_[n][0] -= periodiclen_;
+			if (C_[n << 2] > periodiclen_) {
+				C_[n << 2] -= periodiclen_;
+				C1_[n << 2] -= periodiclen_;
 			}
-			else if (C_[n][0] < 0.0) {
-				C_[n][0] += periodiclen_;
-				C1_[n][0] += periodiclen_;
+			else if (C_[n << 2] < 0.0) {
+				C_[n << 2] += periodiclen_;
+				C1_[n << 2] += periodiclen_;
 			}
-			if (C_[n][1] > periodiclen_) {
-				C_[n][1] -= periodiclen_;
-				C1_[n][1] -= periodiclen_;
+			if (C_[n << 2 + 1] > periodiclen_) {
+				C_[n << 2 + 1] -= periodiclen_;
+				C1_[n << 2 + 1] -= periodiclen_;
 			}
-			else if (C_[n][1] < 0.0) {
-				C_[n][1] += periodiclen_;
-				C1_[n][1] += periodiclen_;
+			else if (C_[n << 2 + 1] < 0.0) {
+				C_[n << 2 + 1] += periodiclen_;
+				C1_[n << 2 + 1] += periodiclen_;
 			}
-			if (C_[n][2] > periodiclen_) {
-				C_[n][2] -= periodiclen_;
-				C1_[n][2] -= periodiclen_;
+			if (C_[n << 2 + 2] > periodiclen_) {
+				C_[n << 2 + 2] -= periodiclen_;
+				C1_[n << 2 + 2] -= periodiclen_;
 			}
-			else if (C_[n][2] < 0.0) {
-				C_[n][2] += periodiclen_;
-				C1_[n][2] += periodiclen_;
+			else if (C_[n << 2 + 2] < 0.0) {
+				C_[n << 2 + 2] += periodiclen_;
+				C1_[n << 2 + 2] += periodiclen_;
 			}
 		},
 			tbb::auto_partitioner());
