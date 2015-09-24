@@ -368,9 +368,9 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
 			if (armd.useavx) {
 				D3DXMatrixTranslation(
 					&World,
-					boost::numeric_cast<float>(armd.C()[i][0]) - pos,
-					boost::numeric_cast<float>(armd.C()[i][1]) - pos,
-					boost::numeric_cast<float>(armd.C()[i][2]) - pos);
+					boost::numeric_cast<float>(armd.C()[i << 2]) - pos,
+					boost::numeric_cast<float>(armd.C()[(i << 2) + 1]) - pos,
+					boost::numeric_cast<float>(armd.C()[(i << 2) + 2]) - pos);
 			}
 			else {
 				D3DXMatrixTranslation(

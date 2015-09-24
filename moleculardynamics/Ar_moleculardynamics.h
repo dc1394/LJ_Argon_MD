@@ -13,13 +13,13 @@
 #include "../myrandom/myrand.h"
 #include "../utility/property.h"
 #include "useavx.h"
-#include <array>							// for std::array
-#include <cmath>							// for std::sqrt
-#include <cstdint>							// for std::int32_t
-#include <vector>							// for std::vector
-#include <dvec.h>
-#include <boost/simd/memory/allocator.hpp>  // for boost::simd::allocator
-#include <boost/simd/sdk/simd/pack.hpp>		// for boost::simd::pack
+#include <array>											// for std::array
+#include <cmath>											// for std::sqrt
+#include <cstdint>											// for std::int32_t
+#include <vector>											// for std::vector
+#include <boost/simd/include/functions/aligned_store.hpp>	// for boost::simd::aligned_store
+#include <boost/simd/memory/allocator.hpp>					// for boost::simd::allocator
+#include <boost/simd/sdk/simd/pack.hpp>						// for boost::simd::pack
 
 namespace moleculardynamics {
 	using namespace utility;
@@ -533,24 +533,24 @@ namespace moleculardynamics {
 					sz = static_cast<double>(k) * lat_;
 
 					// 基本セル内には4つの原子がある
-					C_[n][0] = sx;
-					C_[n][1] = sy;
-					C_[n][2] = sz;
+					C_[n << 2] = sx;
+					C_[(n << 2) + 1] = sy;
+					C_[(n << 2) + 2] = sz;
 					n++;
 
-					C_[n][0] = 0.5 * lat_ + sx;
-					C_[n][1] = 0.5 * lat_ + sy;
-					C_[n][2] = sz;
+					C_[n << 2] = 0.5 * lat_ + sx;
+					C_[(n << 2) + 1] = 0.5 * lat_ + sy;
+					C_[(n << 2) + 2] = sz;
 					n++;
 
-					C_[n][0] = sx;
-					C_[n][1] = 0.5 * lat_ + sy;
-					C_[n][2] = 0.5 * lat_ + sz;
+					C_[n << 2] = sx;
+					C_[(n << 2) + 1] = 0.5 * lat_ + sy;
+					C_[(n << 2) + 2] = 0.5 * lat_ + sz;
 					n++;
 
-					C_[n][0] = 0.5 * lat_ + sx;
-					C_[n][1] = sy;
-					C_[n][2] = 0.5 * lat_ + sz;
+					C_[n << 2] = 0.5 * lat_ + sx;
+					C_[(n << 2) + 1] = sy;
+					C_[(n << 2) + 2] = 0.5 * lat_ + sz;
 					n++;
 				}
 			}
@@ -565,9 +565,9 @@ namespace moleculardynamics {
 		sz = 0.0;
 
 		for (auto n = 0; n < NumAtom_; n++) {
-			sx += C_[n][0];
-			sy += C_[n][1];
-			sz += C_[n][2];
+			sx += C_[n << 2];
+			sy += C_[(n << 2) + 1];
+			sz += C_[(n << 2) + 2];
 		}
 
 		sx /= static_cast<double>(NumAtom_);
@@ -575,9 +575,9 @@ namespace moleculardynamics {
 		sz /= static_cast<double>(NumAtom_);
 
 		for (auto n = 0; n < NumAtom_; n++) {
-			C_[n][0] -= sx;
-			C_[n][1] -= sy;
-			C_[n][2] -= sz;
+			C_[n << 2] -= sx;
+			C_[(n << 2) + 1] -= sy;
+			C_[(n << 2) + 2] -= sz;
 		}
 	}
 
@@ -661,7 +661,7 @@ namespace moleculardynamics {
 			rndZ *= tmp;
 
 			// 方向はランダムに与える
-			V_[n] = Ar_moleculardynamics::pack_t(v * rndX, v * rndY, v * rndZ, 0.0);
+			boost::simd::aligned_store(Ar_moleculardynamics::pack_t(v * rndX, v * rndY, v * rndZ, 0.0), &V_[n << 2]);
 		}
 
 		auto sx = 0.0;
@@ -669,9 +669,9 @@ namespace moleculardynamics {
 		auto sz = 0.0;
 
 		for (auto n = 0; n < NumAtom_; n++) {
-			sx += V_[n][0];
-			sy += V_[n][1];
-			sz += V_[n][2];
+			sx += V_[n << 2];
+			sy += V_[(n << 2) + 1];
+			sz += V_[(n << 2) + 2];
 		}
 
 		sx /= static_cast<double>(NumAtom_);
@@ -680,9 +680,9 @@ namespace moleculardynamics {
 
 		// 重心の並進運動を避けるために、速度の和がゼロになるように補正
 		for (auto n = 0; n < NumAtom_; n++) {
-			V_[n][0] -= sx;
-			V_[n][1] -= sy;
-			V_[n][2] -= sz;
+			V_[n << 2] -= sx;
+			V_[(n << 2) + 1] -= sy;
+			V_[(n << 2) + 2] -= sz;
 		}
 	}
 
