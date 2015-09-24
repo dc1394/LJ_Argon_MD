@@ -91,7 +91,7 @@ namespace moleculardynamics {
 	void Ar_moleculardynamics::Calc_Forces<UseAVX::True>()
 	{
 		for (auto n = 0; n < NumAtom_; n++) {
-			boost::simd::aligned_store(boost::simd::splat<pack_t>(0.0), &F_[n << 2]);
+			boost::simd::aligned_store(boost::simd::splat<Ar_moleculardynamics::pack_t>(0.0), &F_[n << 2]);
 		}
 
 		tbb::parallel_for(
@@ -129,8 +129,8 @@ namespace moleculardynamics {
 
 									Ar_moleculardynamics::pack_t p(dx, dy, dz, 0.0);
 
-									auto res = pack_t(&F_[n << 2]);
-									res += p * boost::simd::splat<pack_t>(Frdivr);
+									auto res = Ar_moleculardynamics::pack_t(&F_[n << 2]);
+									res += p * boost::simd::splat<Ar_moleculardynamics::pack_t>(Frdivr);
 									boost::simd::aligned_store(res, &F_[n << 2]);
 								}
 							}
@@ -259,22 +259,22 @@ namespace moleculardynamics {
 				NumAtom_,
 				1,
 				[this, s](std::int32_t n) {
-				pack_t ctmp(&C_[n << 2]);
+				Ar_moleculardynamics::pack_t ctmp(&C_[n << 2]);
 				boost::simd::aligned_store(ctmp, &C1_[n << 2]);
 				//C1_[n] = C_[n];
 
 				// scaling of velocity
-				pack_t vtmp(&V_[n << 2]);
-				vtmp *= boost::simd::splat<pack_t>(s);
+				Ar_moleculardynamics::pack_t vtmp(&V_[n << 2]);
+				vtmp *= boost::simd::splat<Ar_moleculardynamics::pack_t>(s);
 				//V_[n] *= s;
 
 				// update coordinates and velocity
-				pack_t ftmp(&F_[n << 2]);
-				ctmp += boost::simd::splat<pack_t>(Ar_moleculardynamics::DT) * vtmp + ftmp * boost::simd::splat<pack_t>(0.5 * dt2_);
+				Ar_moleculardynamics::pack_t ftmp(&F_[n << 2]);
+				ctmp += boost::simd::splat<Ar_moleculardynamics::pack_t>(Ar_moleculardynamics::DT) * vtmp + ftmp * boost::simd::splat<Ar_moleculardynamics::pack_t>(0.5 * dt2_);
 				boost::simd::aligned_store(ctmp, &C_[n << 2]);
 				//C_[n] += Ar_moleculardynamics::DT * V_[n] + 0.5 * F_[n] * dt2_;
 				
-				vtmp += boost::simd::splat<pack_t>(Ar_moleculardynamics::DT) * ftmp;
+				vtmp += boost::simd::splat<Ar_moleculardynamics::pack_t>(Ar_moleculardynamics::DT) * ftmp;
 				boost::simd::aligned_store(vtmp, &V_[n << 2]);
 				//V_[n] += Ar_moleculardynamics::DT * F_[n];
 
@@ -290,20 +290,20 @@ namespace moleculardynamics {
 				NumAtom_,
 				1,
 				[this, s](std::int32_t n) {
-				pack_t ctmp(&C_[n << 2]);
+				Ar_moleculardynamics::pack_t ctmp(&C_[n << 2]);
 				auto const cback = ctmp;
-				pack_t c1tmp(&C1_[n << 2]);
-				pack_t ftmp(&F_[n << 2]);
+				Ar_moleculardynamics::pack_t c1tmp(&C1_[n << 2]);
+				Ar_moleculardynamics::pack_t ftmp(&F_[n << 2]);
 				//auto const rtmp = C_[n];
 
 				// update coordinates and velocity
 				// Verlet法の座標更新式において速度成分を抜き出し、その部分をスケールする
-				ctmp += boost::simd::splat<pack_t>(s) * (ctmp - c1tmp) + ftmp * boost::simd::splat<pack_t>(dt2_);
+				ctmp += boost::simd::splat<Ar_moleculardynamics::pack_t>(s) * (ctmp - c1tmp) + ftmp * boost::simd::splat<Ar_moleculardynamics::pack_t>(dt2_);
 				boost::simd::aligned_store(ctmp, &C_[n << 2]);
 				//C_[n] += s * (C_[n] - C1_[n]) + F_[n] * dt2_;
 
 				boost::simd::aligned_store(
-					boost::simd::splat<pack_t>(0.5) * (ctmp - c1tmp) / boost::simd::splat<pack_t>(Ar_moleculardynamics::DT),
+					boost::simd::splat<Ar_moleculardynamics::pack_t>(0.5) * (ctmp - c1tmp) / boost::simd::splat<Ar_moleculardynamics::pack_t>(Ar_moleculardynamics::DT),
 					&V_[n << 2]);
 				//V_[n] = 0.5 * (C_[n] - C1_[n]) / Ar_moleculardynamics::DT;
 
