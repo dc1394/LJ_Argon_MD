@@ -17,9 +17,8 @@
 #include <cmath>											// for std::sqrt
 #include <cstdint>											// for std::int32_t
 #include <vector>											// for std::vector
-#include <boost/simd/include/functions/aligned_store.hpp>	// for boost::simd::aligned_store
+#include <dvec.h>
 #include <boost/simd/memory/allocator.hpp>					// for boost::simd::allocator
-#include <boost/simd/sdk/simd/pack.hpp>						// for boost::simd::pack
 
 namespace moleculardynamics {
 	using namespace utility;
@@ -29,12 +28,6 @@ namespace moleculardynamics {
         アルゴンに対して、分子動力学シミュレーションを行うクラス
     */
     class Ar_moleculardynamics final {
-		// #region 型エイリアス
-
-		using pack_t = boost::simd::pack<double>;
-		
-		// #endregion 型エイリアス
-
         // #region コンストラクタ・デストラクタ
 
     public:
@@ -660,8 +653,10 @@ namespace moleculardynamics {
 			rndY *= tmp;
 			rndZ *= tmp;
 
+			F64vec4 vvec(0.0, v * rndZ, v * rndY, v * rndX);
+
 			// 方向はランダムに与える
-			boost::simd::aligned_store(Ar_moleculardynamics::pack_t(v * rndX, v * rndY, v * rndZ, 0.0), &V_[n << 2]);
+			_mm256_store_pd(&V_[n << 2], vvec);
 		}
 
 		auto sx = 0.0;

@@ -9,10 +9,6 @@
 #include "Ar_moleculardynamics.h"
 #include <tbb/parallel_for.h>							// for tbb::parallel_for
 #include <tbb/partitioner.h>							// for tbb::auto_partitioner
-#include <boost/simd/include/functions/divides.hpp>
-#include <boost/simd/include/functions/plus.hpp>
-#include <boost/simd/include/functions/sum.hpp>
-#include <boost/simd/include/functions/multiplies.hpp>
 
 namespace moleculardynamics {
     // #region static private 定数
@@ -62,7 +58,7 @@ namespace moleculardynamics {
 		rcm6_(std::pow(rc_, -6.0)),
 		rcm12_(std::pow(rc_, -12.0)),
 		Tg_(Ar_moleculardynamics::FIRSTTEMP * Ar_moleculardynamics::KB / Ar_moleculardynamics::YPSILON),
-		useavx_(false),
+		useavx_(true),
 		Vrc_(4.0 * (rcm12_ - rcm6_)),
 		V_(Nc_ * Nc_ * Nc_ * 4 * 4),
 		VX_(Nc_ * Nc_ * Nc_ * 4),
@@ -91,7 +87,7 @@ namespace moleculardynamics {
 	void Ar_moleculardynamics::Calc_Forces<UseAVX::True>()
 	{
 		for (auto n = 0; n < NumAtom_; n++) {
-			boost::simd::aligned_store(boost::simd::splat<Ar_moleculardynamics::pack_t>(0.0), &F_[n << 2]);
+			_mm256_store_pd(&F_[n << 2], F64vec4(0.0));
 		}
 
 		tbb::parallel_for(
@@ -127,11 +123,11 @@ namespace moleculardynamics {
 									auto const Fr = 48.0 * rm13 - 24.0 * rm7;
 									auto const Frdivr = Fr / r;
 
-									Ar_moleculardynamics::pack_t p(dx, dy, dz, 0.0);
+									F64vec4 p(0.0, dz, dy, dx);
 
-									auto res = Ar_moleculardynamics::pack_t(&F_[n << 2]);
-									res += p * boost::simd::splat<Ar_moleculardynamics::pack_t>(Frdivr);
-									boost::simd::aligned_store(res, &F_[n << 2]);
+									F64vec4 res(_mm256_load_pd(&F_[n << 2]));
+									res += p * F64vec4(Frdivr);
+									_mm256_store_pd(&F_[n << 2], res);
 								}
 							}
 						}
@@ -259,23 +255,23 @@ namespace moleculardynamics {
 				NumAtom_,
 				1,
 				[this, s](std::int32_t n) {
-				Ar_moleculardynamics::pack_t ctmp(&C_[n << 2]);
-				boost::simd::aligned_store(ctmp, &C1_[n << 2]);
+				F64vec4 ctmp(_mm256_load_pd(&C_[n << 2]));
+				_mm256_store_pd(&C1_[n << 2], ctmp);
 				//C1_[n] = C_[n];
 
 				// scaling of velocity
-				Ar_moleculardynamics::pack_t vtmp(&V_[n << 2]);
-				vtmp *= boost::simd::splat<Ar_moleculardynamics::pack_t>(s);
+				F64vec4 vtmp(_mm256_load_pd(&V_[n << 2]));
+				vtmp *= F64vec4(s);
 				//V_[n] *= s;
 
 				// update coordinates and velocity
-				Ar_moleculardynamics::pack_t ftmp(&F_[n << 2]);
-				ctmp += boost::simd::splat<Ar_moleculardynamics::pack_t>(Ar_moleculardynamics::DT) * vtmp + ftmp * boost::simd::splat<Ar_moleculardynamics::pack_t>(0.5 * dt2_);
-				boost::simd::aligned_store(ctmp, &C_[n << 2]);
+				F64vec4 ftmp(_mm256_load_pd(&F_[n << 2]));
+				ctmp += F64vec4(Ar_moleculardynamics::DT) * vtmp + ftmp * F64vec4(0.5 * dt2_);
+				_mm256_store_pd(&C_[n << 2], ctmp);
 				//C_[n] += Ar_moleculardynamics::DT * V_[n] + 0.5 * F_[n] * dt2_;
 				
-				vtmp += boost::simd::splat<Ar_moleculardynamics::pack_t>(Ar_moleculardynamics::DT) * ftmp;
-				boost::simd::aligned_store(vtmp, &V_[n << 2]);
+				vtmp += F64vec4(Ar_moleculardynamics::DT) * ftmp;
+				_mm256_store_pd(&V_[n << 2], vtmp);
 				//V_[n] += Ar_moleculardynamics::DT * F_[n];
 
 			},
@@ -290,24 +286,24 @@ namespace moleculardynamics {
 				NumAtom_,
 				1,
 				[this, s](std::int32_t n) {
-				Ar_moleculardynamics::pack_t ctmp(&C_[n << 2]);
+				F64vec4 ctmp(_mm256_load_pd(&C_[n << 2]));
 				auto const cback = ctmp;
-				Ar_moleculardynamics::pack_t c1tmp(&C1_[n << 2]);
-				Ar_moleculardynamics::pack_t ftmp(&F_[n << 2]);
+				F64vec4 c1tmp(_mm256_load_pd(&C1_[n << 2]));
+				F64vec4 ftmp(_mm256_load_pd(&F_[n << 2]));
 				//auto const rtmp = C_[n];
 
 				// update coordinates and velocity
 				// Verlet法の座標更新式において速度成分を抜き出し、その部分をスケールする
-				ctmp += boost::simd::splat<Ar_moleculardynamics::pack_t>(s) * (ctmp - c1tmp) + ftmp * boost::simd::splat<Ar_moleculardynamics::pack_t>(dt2_);
-				boost::simd::aligned_store(ctmp, &C_[n << 2]);
+				ctmp += F64vec4(s) * (ctmp - c1tmp) + ftmp * F64vec4(dt2_);
+				_mm256_store_pd(&C_[n << 2], ctmp);
 				//C_[n] += s * (C_[n] - C1_[n]) + F_[n] * dt2_;
 
-				boost::simd::aligned_store(
-					boost::simd::splat<Ar_moleculardynamics::pack_t>(0.5) * (ctmp - c1tmp) / boost::simd::splat<Ar_moleculardynamics::pack_t>(Ar_moleculardynamics::DT),
-					&V_[n << 2]);
+				_mm256_store_pd(
+					&V_[n << 2],
+					F64vec4(0.5) * (ctmp - c1tmp) / F64vec4(Ar_moleculardynamics::DT));
 				//V_[n] = 0.5 * (C_[n] - C1_[n]) / Ar_moleculardynamics::DT;
 
-				boost::simd::aligned_store(cback, &C1_[n << 2]);
+				_mm256_store_pd(&C1_[n << 2], cback);
 				//C1_[n] = rtmp;
 			},
 				tbb::auto_partitioner());
