@@ -1,6 +1,6 @@
 #include <limits>
 #include <cstddef>
-#include <malloc.h>	// for _aligned_malloc
+#include <malloc.h>
 
 namespace utility {
 	template <typename T> class aligned_allocator {
@@ -54,7 +54,7 @@ namespace utility {
 		
 		// Š„“–‚Ä‚é‚±‚Æ‚ª‚Å‚«‚éÅ‘å‚Ì—v‘f”‚ğ•Ô‚·
 		size_type max_size() const throw() {
-			return (std::numeric_limits<std::size_t>::max() >> 2) / sizeof(T) ;
+			return ((std::numeric_limits<std::size_t>::max)() >> 2) / sizeof(T) ;
 		}
 	};
 

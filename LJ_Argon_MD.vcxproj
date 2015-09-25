@@ -215,7 +215,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
-      <Optimization>Full</Optimization>
+      <Optimization>MaxSpeedHighLevel</Optimization>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -233,6 +233,9 @@
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
       <Cpp0xSupport>true</Cpp0xSupport>
       <AssemblerOutput>AssemblyAndSourceCode</AssemblerOutput>
+      <OptimizeForWindowsApplication>true</OptimizeForWindowsApplication>
+      <FlushDenormalResultsToZero>true</FlushDenormalResultsToZero>
+      <Parallelization>true</Parallelization>
     </ClCompile>
     <Link>
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
@@ -395,7 +398,7 @@ copy document\readme.txt Release</Command>
     <ClInclude Include="moleculardynamics\Ar_moleculardynamics.h" />
     <ClInclude Include="moleculardynamics\useavx.h" />
     <ClInclude Include="myrandom\myrand.h" />
-    <ClInclude Include="utility\aligned_malloc_allocator.h" />
+    <ClInclude Include="utility\aligned_allocator.h" />
     <ClInclude Include="utility\property.h" />
     <ClInclude Include="utility\utility.h" />
     <None Include="DXUT\Optional\directx.ico" />

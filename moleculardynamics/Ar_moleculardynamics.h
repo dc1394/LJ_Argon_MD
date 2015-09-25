@@ -12,13 +12,13 @@
 
 #include "../myrandom/myrand.h"
 #include "../utility/property.h"
+#include "../utility/aligned_allocator.h"
 #include "useavx.h"
 #include <array>											// for std::array
 #include <cmath>											// for std::sqrt
 #include <cstdint>											// for std::int32_t
 #include <vector>											// for std::vector
 #include <boost/simd/include/functions/aligned_store.hpp>	// for boost::simd::aligned_store
-#include <boost/simd/memory/allocator.hpp>					// for boost::simd::allocator
 #include <boost/simd/sdk/simd/pack.hpp>						// for boost::simd::pack
 
 namespace moleculardynamics {
@@ -181,7 +181,7 @@ namespace moleculardynamics {
 		/*!
 			n番目の原子の座標へのプロパティ
 		*/
-		Property<std::vector<double, boost::simd::allocator<double>> const &> const C;
+		Property<std::vector<double, aligned_allocator<double>> const &> const C;
 
 		//! A property.
 		/*!
@@ -307,13 +307,13 @@ namespace moleculardynamics {
 		/*!
 			n個目の原子の座標
 		*/
-		std::vector<double, boost::simd::allocator<double>> C_;
+		std::vector<double, aligned_allocator<double>> C_;
 
 		//! A private member variable.
 		/*!
 			n個目の原子の前の計算の座標
 		*/
-		std::vector<double, boost::simd::allocator<double>> C1_;
+		std::vector<double, aligned_allocator<double>> C1_;
 		
 		//! A private member variable (constant).
 		/*!
@@ -325,7 +325,7 @@ namespace moleculardynamics {
 		/*!
 			n個目の原子に働く力のx成分
 		*/
-		std::vector<double, boost::simd::allocator<double>> F_;
+		std::vector<double, aligned_allocator<double>> F_;
 
 		//! A private member variable.
 		/*!
@@ -439,7 +439,7 @@ namespace moleculardynamics {
 		/*!
 			n個目の原子の速度
 		*/
-		std::vector<double, boost::simd::allocator<double>> V_;
+		std::vector<double, aligned_allocator<double>> V_;
 
 		//! A private member variable.
 		/*!

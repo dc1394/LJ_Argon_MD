@@ -62,7 +62,7 @@ namespace moleculardynamics {
 		rcm6_(std::pow(rc_, -6.0)),
 		rcm12_(std::pow(rc_, -12.0)),
 		Tg_(Ar_moleculardynamics::FIRSTTEMP * Ar_moleculardynamics::KB / Ar_moleculardynamics::YPSILON),
-		useavx_(false),
+		useavx_(true),
 		Vrc_(4.0 * (rcm12_ - rcm6_)),
 		V_(Nc_ * Nc_ * Nc_ * 4 * 4),
 		VX_(Nc_ * Nc_ * Nc_ * 4),
@@ -556,7 +556,7 @@ namespace moleculardynamics {
 		periodiclen_ = lat_ * static_cast<double>(Nc_);
 	}
 
-	double Ar_moleculardynamics::norm2(double x, double y, double z) const
+	inline double Ar_moleculardynamics::norm2(double x, double y, double z) const
 	{
 		return (x * x + y * y + z * z);
 	}
