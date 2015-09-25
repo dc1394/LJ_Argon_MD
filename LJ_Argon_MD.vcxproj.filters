@@ -105,6 +105,9 @@
     <ClInclude Include="moleculardynamics\useavx.h">
       <Filter>moleculardynamics</Filter>
     </ClInclude>
+    <ClInclude Include="utility\aligned_malloc_allocator.h">
+      <Filter>utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LJ_Argon_MD.cpp" />

@@ -86,56 +86,56 @@ namespace moleculardynamics {
 	template <>
 	void Ar_moleculardynamics::Calc_Forces<UseAVX::True>()
 	{
-		for (auto n = 0; n < NumAtom_; n++) {
-			_mm256_store_pd(&F_[n << 2], F64vec4(0.0));
-		}
+		//for (auto n = 0; n < NumAtom_; n++) {
+		//	_mm256_store_pd(&F_[n << 2], F64vec4(0.0));
+		//}
 
-		tbb::parallel_for(
-				0,
-				NumAtom_,
-				1,
-				[this](std::int32_t n) {
-			for (auto m = 0; m < NumAtom_; m++) {
+		//tbb::parallel_for(
+		//		0,
+		//		NumAtom_,
+		//		1,
+		//		[this](std::int32_t n) {
+		//	for (auto m = 0; m < NumAtom_; m++) {
 
-				// ±ncp分のセル内の原子との相互作用を計算
-				for (auto i = -ncp; i <= ncp; i++) {
-					for (auto j = -ncp; j <= ncp; j++) {
-						for (auto k = -ncp; k <= ncp; k++) {
-							auto const sx = static_cast<double>(i) * periodiclen_;
-							auto const sy = static_cast<double>(j) * periodiclen_;
-							auto const sz = static_cast<double>(k) * periodiclen_;
+		//		// ±ncp分のセル内の原子との相互作用を計算
+		//		for (auto i = -ncp; i <= ncp; i++) {
+		//			for (auto j = -ncp; j <= ncp; j++) {
+		//				for (auto k = -ncp; k <= ncp; k++) {
+		//					auto const sx = static_cast<double>(i) * periodiclen_;
+		//					auto const sy = static_cast<double>(j) * periodiclen_;
+		//					auto const sz = static_cast<double>(k) * periodiclen_;
 
-							// 自分自身との相互作用を排除
-							if (n != m || i != 0 || j != 0 || k != 0) {
-								auto dx = C_[n << 2] - (C_[m << 2] + sx);
-								auto dy = C_[(n << 2) + 1] - (C_[(m << 2) + 1] + sy);
-								auto dz = C_[(n << 2) + 2] - (C_[(m << 2) + 2] + sz);
+		//					// 自分自身との相互作用を排除
+		//					if (n != m || i != 0 || j != 0 || k != 0) {
+		//						auto dx = C_[n << 2] - (C_[m << 2] + sx);
+		//						auto dy = C_[(n << 2) + 1] - (C_[(m << 2) + 1] + sy);
+		//						auto dz = C_[(n << 2) + 2] - (C_[(m << 2) + 2] + sz);
 
-								auto const r2 = norm2(dx, dy, dz);
-								// 打ち切り距離内であれば計算
-								if (r2 <= rc2_) {
-									auto const r = std::sqrt(r2);
-									auto const rm6 = 1.0 / (r2 * r2 * r2);
-									auto const rm7 = rm6 / r;
-									auto const rm12 = rm6 * rm6;
-									auto const rm13 = rm12 / r;
+		//						auto const r2 = norm2(dx, dy, dz);
+		//						// 打ち切り距離内であれば計算
+		//						if (r2 <= rc2_) {
+		//							auto const r = std::sqrt(r2);
+		//							auto const rm6 = 1.0 / (r2 * r2 * r2);
+		//							auto const rm7 = rm6 / r;
+		//							auto const rm12 = rm6 * rm6;
+		//							auto const rm13 = rm12 / r;
 
-									auto const Fr = 48.0 * rm13 - 24.0 * rm7;
-									auto const Frdivr = Fr / r;
+		//							auto const Fr = 48.0 * rm13 - 24.0 * rm7;
+		//							auto const Frdivr = Fr / r;
 
-									F64vec4 p(0.0, dz, dy, dx);
+		//							F64vec4 p(0.0, dz, dy, dx);
 
-									F64vec4 res(_mm256_load_pd(&F_[n << 2]));
-									res += p * F64vec4(Frdivr);
-									_mm256_store_pd(&F_[n << 2], res);
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		tbb::auto_partitioner());
+		//							F64vec4 res(_mm256_load_pd(&F_[n << 2]));
+		//							res += p * F64vec4(Frdivr);
+		//							_mm256_store_pd(&F_[n << 2], res);
+		//						}
+		//					}
+		//				}
+		//			}
+		//		}
+		//	}
+		//},
+		//tbb::auto_partitioner());
 	}
 
 	template <>
@@ -246,69 +246,61 @@ namespace moleculardynamics {
 
 		auto const s = std::sqrt((Tg_ + Ar_moleculardynamics::ALPHA * (Tc_ - Tg_)) / Tc_);
 
-		switch (MD_iter_) {
-		case 1:
-			// update the coordinates by the second order Euler method
-			// 最初のステップだけ修正Euler法で時間発展
-			tbb::parallel_for(
-				0,
-				NumAtom_,
-				1,
-				[this, s](std::int32_t n) {
-				F64vec4 ctmp(_mm256_load_pd(&C_[n << 2]));
-				_mm256_store_pd(&C1_[n << 2], ctmp);
-				//C1_[n] = C_[n];
+		//switch (MD_iter_) {
+		//case 1:
+		//	// update the coordinates by the second order Euler method
+		//	// 最初のステップだけ修正Euler法で時間発展
+		//	tbb::parallel_for(
+		//		0,
+		//		NumAtom_,
+		//		1,
+		//		[this, s](std::int32_t n) {
+		//		F64vec4 ctmp(_mm256_load_pd(&C_[n << 2]));
+		//		_mm256_store_pd(&C1_[n << 2], ctmp);
 
-				// scaling of velocity
-				F64vec4 vtmp(_mm256_load_pd(&V_[n << 2]));
-				vtmp *= F64vec4(s);
-				//V_[n] *= s;
+		//		// scaling of velocity
+		//		F64vec4 vtmp(_mm256_load_pd(&V_[n << 2]));
+		//		vtmp *= F64vec4(s);
 
-				// update coordinates and velocity
-				F64vec4 ftmp(_mm256_load_pd(&F_[n << 2]));
-				ctmp += F64vec4(Ar_moleculardynamics::DT) * vtmp + ftmp * F64vec4(0.5 * dt2_);
-				_mm256_store_pd(&C_[n << 2], ctmp);
-				//C_[n] += Ar_moleculardynamics::DT * V_[n] + 0.5 * F_[n] * dt2_;
-				
-				vtmp += F64vec4(Ar_moleculardynamics::DT) * ftmp;
-				_mm256_store_pd(&V_[n << 2], vtmp);
-				//V_[n] += Ar_moleculardynamics::DT * F_[n];
+		//		// update coordinates and velocity
+		//		F64vec4 ftmp(_mm256_load_pd(&F_[n << 2]));
+		//		ctmp += F64vec4(Ar_moleculardynamics::DT) * vtmp + ftmp * F64vec4(0.5 * dt2_);
+		//		_mm256_store_pd(&C_[n << 2], ctmp);
+		//		
+		//		vtmp += F64vec4(Ar_moleculardynamics::DT) * ftmp;
+		//		_mm256_store_pd(&V_[n << 2], vtmp);
 
-			},
-				tbb::auto_partitioner());
-			break;
+		//	},
+		//		tbb::auto_partitioner());
+		//	break;
 
-		default:
-			// update the coordinates by the Verlet method
+		//default:
+		//	// update the coordinates by the Verlet method
 
-			tbb::parallel_for(
-				0,
-				NumAtom_,
-				1,
-				[this, s](std::int32_t n) {
-				F64vec4 ctmp(_mm256_load_pd(&C_[n << 2]));
-				auto const cback = ctmp;
-				F64vec4 c1tmp(_mm256_load_pd(&C1_[n << 2]));
-				F64vec4 ftmp(_mm256_load_pd(&F_[n << 2]));
-				//auto const rtmp = C_[n];
+		//	tbb::parallel_for(
+		//		0,
+		//		NumAtom_,
+		//		1,
+		//		[this, s](std::int32_t n) {
+		//		F64vec4 ctmp(_mm256_load_pd(&C_[n << 2]));
+		//		auto const cback = ctmp;
+		//		F64vec4 c1tmp(_mm256_load_pd(&C1_[n << 2]));
+		//		F64vec4 ftmp(_mm256_load_pd(&F_[n << 2]));
 
-				// update coordinates and velocity
-				// Verlet法の座標更新式において速度成分を抜き出し、その部分をスケールする
-				ctmp += F64vec4(s) * (ctmp - c1tmp) + ftmp * F64vec4(dt2_);
-				_mm256_store_pd(&C_[n << 2], ctmp);
-				//C_[n] += s * (C_[n] - C1_[n]) + F_[n] * dt2_;
+		//		// update coordinates and velocity
+		//		// Verlet法の座標更新式において速度成分を抜き出し、その部分をスケールする
+		//		ctmp += F64vec4(s) * (ctmp - c1tmp) + ftmp * F64vec4(dt2_);
+		//		_mm256_store_pd(&C_[n << 2], ctmp);
 
-				_mm256_store_pd(
-					&V_[n << 2],
-					F64vec4(0.5) * (ctmp - c1tmp) / F64vec4(Ar_moleculardynamics::DT));
-				//V_[n] = 0.5 * (C_[n] - C1_[n]) / Ar_moleculardynamics::DT;
+		//		_mm256_store_pd(
+		//			&V_[n << 2],
+		//			F64vec4(0.5) * (ctmp - c1tmp) / F64vec4(Ar_moleculardynamics::DT));
 
-				_mm256_store_pd(&C1_[n << 2], cback);
-				//C1_[n] = rtmp;
-			},
-				tbb::auto_partitioner());
-			break;
-		}
+		//		_mm256_store_pd(&C1_[n << 2], cback);
+		//	},
+		//		tbb::auto_partitioner());
+		//	break;
+		//}
 
 		// consider the periodic boundary condination
 		// セルの外側に出たら座標をセル内に戻す
@@ -475,11 +467,11 @@ namespace moleculardynamics {
 
 		if (useavx_) {
 			MD_initPos<UseAVX::True>();
-			MD_initVel<UseAVX::True>();
+			//MD_initVel<UseAVX::True>();
 		}
 		else {
 			MD_initPos<UseAVX::False>();
-			MD_initVel<UseAVX::False>();
+			//MD_initVel<UseAVX::False>();
 		}		
     }
 
@@ -528,20 +520,20 @@ namespace moleculardynamics {
 
     bool Ar_moleculardynamics::availableAVX() const
     {
-#if (_MSC_FULL_VER >= 160040219)
-        std::array<std::int32_t, 4> cpuInfo = { 0 };
-        ::__cpuid(cpuInfo.data(), 1);
-
-        auto const osUsesXSAVE_XRSTORE = cpuInfo[2] & (1 << 27) || false;
-        auto const cpuAVXSuport = cpuInfo[2] & (1 << 28) || false;
-
-        if (osUsesXSAVE_XRSTORE && cpuAVXSuport)
-        {
-            // Check if the OS will save the YMM registers
-            auto const xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
-            return (xcrFeatureMask & 0x6) || false;
-        }
-#endif
+//#if (_MSC_FULL_VER >= 160040219)
+//        std::array<std::int32_t, 4> cpuInfo = { 0 };
+//        ::__cpuid(cpuInfo.data(), 1);
+//
+//        auto const osUsesXSAVE_XRSTORE = cpuInfo[2] & (1 << 27) || false;
+//        auto const cpuAVXSuport = cpuInfo[2] & (1 << 28) || false;
+//
+//        if (osUsesXSAVE_XRSTORE && cpuAVXSuport)
+//        {
+//            // Check if the OS will save the YMM registers
+//            auto const xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
+//            return (xcrFeatureMask & 0x6) || false;
+//        }
+//#endif
         return false;
     }
 

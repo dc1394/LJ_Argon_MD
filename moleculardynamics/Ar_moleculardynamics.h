@@ -12,13 +12,14 @@
 
 #include "../myrandom/myrand.h"
 #include "../utility/property.h"
+#include "../utility/aligned_malloc_allocator.h"
 #include "useavx.h"
 #include <array>											// for std::array
 #include <cmath>											// for std::sqrt
 #include <cstdint>											// for std::int32_t
 #include <vector>											// for std::vector
 #include <dvec.h>
-#include <boost/simd/memory/allocator.hpp>					// for boost::simd::allocator
+#include <immintrin.h>
 
 namespace moleculardynamics {
 	using namespace utility;
@@ -174,7 +175,7 @@ namespace moleculardynamics {
 		/*!
 			n番目の原子の座標へのプロパティ
 		*/
-		Property<std::vector<double, boost::simd::allocator<double>> const &> const C;
+		Property<std::vector<double, utility::VirtualAlloc_allocator<double>> const &> const C;
 
 		//! A property.
 		/*!
@@ -300,7 +301,7 @@ namespace moleculardynamics {
 		/*!
 			n個目の原子の座標
 		*/
-		std::vector<double, boost::simd::allocator<double>> C_;
+		std::vector<double, utility::VirtualAlloc_allocator<double>> C_;
 
 		//! A private member variable.
 		/*!
@@ -432,7 +433,7 @@ namespace moleculardynamics {
 		/*!
 			n個目の原子の速度
 		*/
-		std::vector<double, boost::simd::allocator<double>> V_;
+		//std::vector<double, boost::simd::allocator<double>> V_;
 
 		//! A private member variable.
 		/*!
@@ -517,61 +518,61 @@ namespace moleculardynamics {
 		double sx, sy, sz;
 		auto n = 0;
 
-		for (auto i = 0; i < Nc_; i++) {
-			for (auto j = 0; j < Nc_; j++) {
-				for (auto k = 0; k < Nc_; k++) {
-					// 基本セルをコピーする
-					sx = static_cast<double>(i) * lat_;
-					sy = static_cast<double>(j) * lat_;
-					sz = static_cast<double>(k) * lat_;
+		//for (auto i = 0; i < Nc_; i++) {
+		//	for (auto j = 0; j < Nc_; j++) {
+		//		for (auto k = 0; k < Nc_; k++) {
+		//			// 基本セルをコピーする
+		//			sx = static_cast<double>(i) * lat_;
+		//			sy = static_cast<double>(j) * lat_;
+		//			sz = static_cast<double>(k) * lat_;
 
-					// 基本セル内には4つの原子がある
-					C_[n << 2] = sx;
-					C_[(n << 2) + 1] = sy;
-					C_[(n << 2) + 2] = sz;
-					n++;
+		//			// 基本セル内には4つの原子がある
+		//			C_[n << 2] = sx;
+		//			C_[(n << 2) + 1] = sy;
+		//			C_[(n << 2) + 2] = sz;
+		//			n++;
 
-					C_[n << 2] = 0.5 * lat_ + sx;
-					C_[(n << 2) + 1] = 0.5 * lat_ + sy;
-					C_[(n << 2) + 2] = sz;
-					n++;
+		//			C_[n << 2] = 0.5 * lat_ + sx;
+		//			C_[(n << 2) + 1] = 0.5 * lat_ + sy;
+		//			C_[(n << 2) + 2] = sz;
+		//			n++;
 
-					C_[n << 2] = sx;
-					C_[(n << 2) + 1] = 0.5 * lat_ + sy;
-					C_[(n << 2) + 2] = 0.5 * lat_ + sz;
-					n++;
+		//			C_[n << 2] = sx;
+		//			C_[(n << 2) + 1] = 0.5 * lat_ + sy;
+		//			C_[(n << 2) + 2] = 0.5 * lat_ + sz;
+		//			n++;
 
-					C_[n << 2] = 0.5 * lat_ + sx;
-					C_[(n << 2) + 1] = sy;
-					C_[(n << 2) + 2] = 0.5 * lat_ + sz;
-					n++;
-				}
-			}
-		}
+		//			C_[n << 2] = 0.5 * lat_ + sx;
+		//			C_[(n << 2) + 1] = sy;
+		//			C_[(n << 2) + 2] = 0.5 * lat_ + sz;
+		//			n++;
+		//		}
+		//	}
+		//}
 
-		NumAtom_ = n;
+		//NumAtom_ = n;
 
-		// move the center of mass to the origin
-		// 系の重心を座標系の原点とする
-		sx = 0.0;
-		sy = 0.0;
-		sz = 0.0;
+		//// move the center of mass to the origin
+		//// 系の重心を座標系の原点とする
+		//sx = 0.0;
+		//sy = 0.0;
+		//sz = 0.0;
 
-		for (auto n = 0; n < NumAtom_; n++) {
-			sx += C_[n << 2];
-			sy += C_[(n << 2) + 1];
-			sz += C_[(n << 2) + 2];
-		}
+		//for (auto n = 0; n < NumAtom_; n++) {
+		//	sx += C_[n << 2];
+		//	sy += C_[(n << 2) + 1];
+		//	sz += C_[(n << 2) + 2];
+		//}
 
-		sx /= static_cast<double>(NumAtom_);
-		sy /= static_cast<double>(NumAtom_);
-		sz /= static_cast<double>(NumAtom_);
+		//sx /= static_cast<double>(NumAtom_);
+		//sy /= static_cast<double>(NumAtom_);
+		//sz /= static_cast<double>(NumAtom_);
 
-		for (auto n = 0; n < NumAtom_; n++) {
-			C_[n << 2] -= sx;
-			C_[(n << 2) + 1] -= sy;
-			C_[(n << 2) + 2] -= sz;
-		}
+		//for (auto n = 0; n < NumAtom_; n++) {
+		//	C_[n << 2] -= sx;
+		//	C_[(n << 2) + 1] -= sy;
+		//	C_[(n << 2) + 2] -= sz;
+		//}
 	}
 
 	template<>
@@ -637,49 +638,49 @@ namespace moleculardynamics {
 		}
 	}
 
-	template<>
-	inline void Ar_moleculardynamics::MD_initVel<UseAVX::True>()
-	{
-		auto const v = std::sqrt(3.0 * Tg_);
+	//template<>
+	//inline void Ar_moleculardynamics::MD_initVel<UseAVX::True>()
+	//{
+	//	auto const v = std::sqrt(3.0 * Tg_);
 
-		myrandom::MyRand mr(-1.0, 1.0);
+	//	myrandom::MyRand mr(-1.0, 1.0);
 
-		for (auto n = 0; n < NumAtom_; n++) {
-			double rndX = mr.myrand();
-			double rndY = mr.myrand();
-			double rndZ = mr.myrand();
-			double tmp = 1.0 / std::sqrt(norm2(rndX, rndY, rndZ));
-			rndX *= tmp;
-			rndY *= tmp;
-			rndZ *= tmp;
+	//	for (auto n = 0; n < NumAtom_; n++) {
+	//		double rndX = mr.myrand();
+	//		double rndY = mr.myrand();
+	//		double rndZ = mr.myrand();
+	//		double tmp = 1.0 / std::sqrt(norm2(rndX, rndY, rndZ));
+	//		rndX *= tmp;
+	//		rndY *= tmp;
+	//		rndZ *= tmp;
 
-			F64vec4 vvec(0.0, v * rndZ, v * rndY, v * rndX);
+	//		F64vec4 vvec(0.0, v * rndZ, v * rndY, v * rndX);
 
-			// 方向はランダムに与える
-			_mm256_store_pd(&V_[n << 2], vvec);
-		}
+	//		// 方向はランダムに与える
+	//		_mm256_store_pd(&V_[n << 2], vvec);
+	//	}
 
-		auto sx = 0.0;
-		auto sy = 0.0;
-		auto sz = 0.0;
+	//	auto sx = 0.0;
+	//	auto sy = 0.0;
+	//	auto sz = 0.0;
 
-		for (auto n = 0; n < NumAtom_; n++) {
-			sx += V_[n << 2];
-			sy += V_[(n << 2) + 1];
-			sz += V_[(n << 2) + 2];
-		}
+	//	for (auto n = 0; n < NumAtom_; n++) {
+	//		sx += V_[n << 2];
+	//		sy += V_[(n << 2) + 1];
+	//		sz += V_[(n << 2) + 2];
+	//	}
 
-		sx /= static_cast<double>(NumAtom_);
-		sy /= static_cast<double>(NumAtom_);
-		sz /= static_cast<double>(NumAtom_);
+	//	sx /= static_cast<double>(NumAtom_);
+	//	sy /= static_cast<double>(NumAtom_);
+	//	sz /= static_cast<double>(NumAtom_);
 
-		// 重心の並進運動を避けるために、速度の和がゼロになるように補正
-		for (auto n = 0; n < NumAtom_; n++) {
-			V_[n << 2] -= sx;
-			V_[(n << 2) + 1] -= sy;
-			V_[(n << 2) + 2] -= sz;
-		}
-	}
+	//	// 重心の並進運動を避けるために、速度の和がゼロになるように補正
+	//	for (auto n = 0; n < NumAtom_; n++) {
+	//		V_[n << 2] -= sx;
+	//		V_[(n << 2) + 1] -= sy;
+	//		V_[(n << 2) + 2] -= sz;
+	//	}
+	//}
 
 	template<>
 	inline void Ar_moleculardynamics::MD_initVel<UseAVX::False>()
