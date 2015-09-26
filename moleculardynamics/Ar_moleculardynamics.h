@@ -10,16 +10,10 @@
 
 #pragma once
 
-#include "../myrandom/myrand.h"
 #include "../utility/property.h"
-#include "../utility/aligned_allocator.h"
-#include "useavx.h"
-#include <array>											// for std::array
-#include <cmath>											// for std::sqrt
-#include <cstdint>											// for std::int32_t
-#include <vector>											// for std::vector
-#include <boost/simd/include/functions/aligned_store.hpp>	// for boost::simd::aligned_store
-#include <boost/simd/sdk/simd/pack.hpp>						// for boost::simd::pack
+#include <array>					// for std::array
+#include <cstdint>					// for std::int32_t
+#include <vector>					// for std::vector
 
 namespace moleculardynamics {
 	using namespace utility;
@@ -29,12 +23,6 @@ namespace moleculardynamics {
         アルゴンに対して、分子動力学シミュレーションを行うクラス
     */
     class Ar_moleculardynamics final {
-		// #region 型エイリアス
-
-		using pack_t = boost::simd::pack<double>;
-		
-		// #endregion 型エイリアス
-
         // #region コンストラクタ・デストラクタ
 
     public:
@@ -54,7 +42,6 @@ namespace moleculardynamics {
 
 		// #region publicメンバ関数
 
-        template <UseAVX U>
         //! A public member function.
         /*!
             原子に働く力を計算する
@@ -96,8 +83,7 @@ namespace moleculardynamics {
             与えた温度の絶対温度を求める
         */
         double getTgiven() const;
-				
-		template <UseAVX U>
+
         //! A public member function.
         /*!
             原子を移動させる
@@ -136,20 +122,12 @@ namespace moleculardynamics {
 		// #region privateメンバ関数
 
 	private:
-        //! A private member function (constant).
-        /*!
-            AVX命令が使えるかどうか
-        */
-        bool availableAVX() const;
-
-		template <UseAVX U>
 		//! A private member function.
 		/*!
 			原子の初期位置を決める
 		*/
 		void MD_initPos();
 
-		template <UseAVX U>
 		//! A private member function.
 		/*!
 			原子の初期速度を決める
@@ -179,12 +157,6 @@ namespace moleculardynamics {
 	public:
 		//! A property.
 		/*!
-			n番目の原子の座標へのプロパティ
-		*/
-		Property<std::vector<double, aligned_allocator<double>> const &> const C;
-
-		//! A property.
-		/*!
 			MDのステップ数へのプロパティ
 		*/
 		Property<std::int32_t> const MD_iter;
@@ -206,13 +178,7 @@ namespace moleculardynamics {
 			格子定数へのプロパティ
 		*/
 		Property<double> const periodiclen;
-
-		//! A property.
-		/*!
-			AVX命令が使えるかどうかへのプロパティ
-		*/
-		Property<bool> const useavx;
-
+		
 		//! A property.
 		/*!
 			n番目の原子のx座標へのプロパティ
@@ -296,7 +262,19 @@ namespace moleculardynamics {
             アルゴン原子に対するε
         */
         static double const YPSILON;
-		
+
+		//! A private member variable (constant).
+		/*!
+			時間刻みの二乗
+		*/
+		double const dt2;
+
+		//! A private member variable.
+		/*!
+			格子定数
+		*/
+		double lat_;
+
 		//! A private member variable (constant).
 		/*!
 			スーパーセルの個数
@@ -305,52 +283,22 @@ namespace moleculardynamics {
 
 		//! A private member variable.
 		/*!
-			n個目の原子の座標
-		*/
-		std::vector<double, aligned_allocator<double>> C_;
-
-		//! A private member variable.
-		/*!
-			n個目の原子の前の計算の座標
-		*/
-		std::vector<double, aligned_allocator<double>> C1_;
-		
-		//! A private member variable (constant).
-		/*!
-			時間刻みの二乗
-		*/
-		double const dt2_;
-
-		//! A private member variable.
-		/*!
 			n個目の原子に働く力のx成分
 		*/
-		std::vector<double, aligned_allocator<double>> F_;
-
-		//! A private member variable.
-		/*!
-			n個目の原子に働く力のx成分
-		*/
-		std::vector<double> FX_;
+		std::vector<double> FX;
 
 		//! A private member variable.
 		/*!
 			n個目の原子に働く力のy成分
 		*/
-		std::vector<double> FY_;
+		std::vector<double> FY;
 
 		//! A private member variable.
 		/*!
 			n個目の原子に働く力のz成分
 		*/
-		std::vector<double> FZ_;
-		
-		//! A private member variable.
-		/*!
-			格子定数
-		*/
-		double lat_;
-		
+		std::vector<double> FZ;
+
 		//! A private member variable.
 		/*!
 			MDのステップ数
@@ -379,25 +327,25 @@ namespace moleculardynamics {
 		/*!
 			カットオフ半径
 		*/
-		double const rc_ = 2.5;
+		double const rc = 2.5;
 
 		//! A private member variable (constant).
 		/*!
 			カットオフ半径の2乗
 		*/
-		double const rc2_;
+		double const rc2;
 
 		//! A private member variable (constant).
 		/*!
 			カットオフ半径の逆数の6乗
 		*/
-		double const rcm6_;
+		double const rcm6;
 
 		//! A private member variable (constant).
 		/*!
 			カットオフ半径の逆数の12乗
 		*/
-		double const rcm12_;
+		double const rcm12;
 
 		//! A private member variable.
 		/*!
@@ -409,7 +357,7 @@ namespace moleculardynamics {
 		/*!
 			時間	
 		*/
-		double t_;
+		double t;
 
 		//! A private member variable.
 		/*!
@@ -425,40 +373,28 @@ namespace moleculardynamics {
 
 		//! A private member variable (constant).
 		/*!
-			AVX命令を使うかどうか
-		*/
-		bool const useavx_;
-
-		//! A private member variable (constant).
-		/*!
 			ポテンシャルエネルギーの打ち切り
 		*/
-        double const Vrc_;
-
-		//! A private member variable.
-		/*!
-			n個目の原子の速度
-		*/
-		std::vector<double, aligned_allocator<double>> V_;
-
+        double const Vrc;
+        
 		//! A private member variable.
 		/*!
 			n個目の原子の速度のx成分
 		*/
-		std::vector<double> VX_;
+		std::vector<double> VX;
 
 		//! A private member variable.
 		/*!
 			n個目の原子の速度のy成分
 		*/
-		std::vector<double> VY_;
+		std::vector<double> VY;
 
 		//! A private member variable.
 		/*!
 			n個目の原子の速度のz成分
 		*/
-		std::vector<double> VZ_;
-
+		std::vector<double> VZ;
+		        
 		//! A private member variable.
 		/*!
 			n個目の原子のx座標
@@ -467,9 +403,9 @@ namespace moleculardynamics {
 
 		//! A private member variable.
 		/*!
-			n個目の原子の前の計算のx座標
+			n個目の原子の初期x座標
 		*/
-		std::vector<double> X1_;
+		std::vector<double> X1;
 		
 		//! A private member variable.
 		/*!
@@ -479,9 +415,9 @@ namespace moleculardynamics {
 
 		//! A private member variable.
 		/*!
-			n個目の原子の前の計算のy座標
+			n個目の原子の初期y座標
 		*/
-		std::vector<double> Y1_;
+		std::vector<double> Y1;
 		
 		//! A private member variable.
 		/*!
@@ -491,9 +427,9 @@ namespace moleculardynamics {
         
 		//! A private member variable.
 		/*!
-			n個目の原子の前の計算のz座標
+			n個目の原子の初期z座標
 		*/
-		std::vector<double> Z1_;
+		std::vector<double> Z1;
 
 		// #endregion メンバ変数
 
@@ -515,222 +451,6 @@ namespace moleculardynamics {
 
         // #endregion 禁止されたコンストラクタ・メンバ関数
     };
-
-	// #region privateメンバ関数
-	
-	template<>
-	inline void Ar_moleculardynamics::MD_initPos<UseAVX::True>()
-	{
-		double sx, sy, sz;
-		auto n = 0;
-
-		for (auto i = 0; i < Nc_; i++) {
-			for (auto j = 0; j < Nc_; j++) {
-				for (auto k = 0; k < Nc_; k++) {
-					// 基本セルをコピーする
-					sx = static_cast<double>(i) * lat_;
-					sy = static_cast<double>(j) * lat_;
-					sz = static_cast<double>(k) * lat_;
-
-					// 基本セル内には4つの原子がある
-					C_[n << 2] = sx;
-					C_[(n << 2) + 1] = sy;
-					C_[(n << 2) + 2] = sz;
-					n++;
-
-					C_[n << 2] = 0.5 * lat_ + sx;
-					C_[(n << 2) + 1] = 0.5 * lat_ + sy;
-					C_[(n << 2) + 2] = sz;
-					n++;
-
-					C_[n << 2] = sx;
-					C_[(n << 2) + 1] = 0.5 * lat_ + sy;
-					C_[(n << 2) + 2] = 0.5 * lat_ + sz;
-					n++;
-
-					C_[n << 2] = 0.5 * lat_ + sx;
-					C_[(n << 2) + 1] = sy;
-					C_[(n << 2) + 2] = 0.5 * lat_ + sz;
-					n++;
-				}
-			}
-		}
-
-		NumAtom_ = n;
-
-		// move the center of mass to the origin
-		// 系の重心を座標系の原点とする
-		sx = 0.0;
-		sy = 0.0;
-		sz = 0.0;
-
-		for (auto n = 0; n < NumAtom_; n++) {
-			sx += C_[n << 2];
-			sy += C_[(n << 2) + 1];
-			sz += C_[(n << 2) + 2];
-		}
-
-		sx /= static_cast<double>(NumAtom_);
-		sy /= static_cast<double>(NumAtom_);
-		sz /= static_cast<double>(NumAtom_);
-
-		for (auto n = 0; n < NumAtom_; n++) {
-			C_[n << 2] -= sx;
-			C_[(n << 2) + 1] -= sy;
-			C_[(n << 2) + 2] -= sz;
-		}
-	}
-
-	template<>
-	inline void Ar_moleculardynamics::MD_initPos<UseAVX::False>()
-	{
-		double sx, sy, sz;
-		auto n = 0;
-
-		for (auto i = 0; i < Nc_; i++) {
-			for (auto j = 0; j < Nc_; j++) {
-				for (auto k = 0; k < Nc_; k++) {
-					// 基本セルをコピーする
-					sx = static_cast<double>(i) * lat_;
-					sy = static_cast<double>(j) * lat_;
-					sz = static_cast<double>(k) * lat_;
-
-					// 基本セル内には4つの原子がある
-					X_[n] = sx;
-					Y_[n] = sy;
-					Z_[n] = sz;
-					n++;
-
-					X_[n] = 0.5 * lat_ + sx;
-					Y_[n] = 0.5 * lat_ + sy;
-					Z_[n] = sz;
-					n++;
-
-					X_[n] = sx;
-					Y_[n] = 0.5 * lat_ + sy;
-					Z_[n] = 0.5 * lat_ + sz;
-					n++;
-
-					X_[n] = 0.5 * lat_ + sx;
-					Y_[n] = sy;
-					Z_[n] = 0.5 * lat_ + sz;
-					n++;
-				}
-			}
-		}
-
-		NumAtom_ = n;
-
-		// move the center of mass to the origin
-		// 系の重心を座標系の原点とする
-		sx = 0.0;
-		sy = 0.0;
-		sz = 0.0;
-
-		for (auto n = 0; n < NumAtom_; n++) {
-			sx += X_[n];
-			sy += Y_[n];
-			sz += Z_[n];
-		}
-
-		sx /= static_cast<double>(NumAtom_);
-		sy /= static_cast<double>(NumAtom_);
-		sz /= static_cast<double>(NumAtom_);
-
-		for (auto n = 0; n < NumAtom_; n++) {
-			X_[n] -= sx;
-			Y_[n] -= sy;
-			Z_[n] -= sz;
-		}
-	}
-
-	template<>
-	inline void Ar_moleculardynamics::MD_initVel<UseAVX::True>()
-	{
-		auto const v = std::sqrt(3.0 * Tg_);
-
-		myrandom::MyRand mr(-1.0, 1.0);
-
-		for (auto n = 0; n < NumAtom_; n++) {
-			double rndX = mr.myrand();
-			double rndY = mr.myrand();
-			double rndZ = mr.myrand();
-			double tmp = 1.0 / std::sqrt(norm2(rndX, rndY, rndZ));
-			rndX *= tmp;
-			rndY *= tmp;
-			rndZ *= tmp;
-
-			// 方向はランダムに与える
-			boost::simd::aligned_store(Ar_moleculardynamics::pack_t(v * rndX, v * rndY, v * rndZ, 0.0), &V_[n << 2]);
-		}
-
-		auto sx = 0.0;
-		auto sy = 0.0;
-		auto sz = 0.0;
-
-		for (auto n = 0; n < NumAtom_; n++) {
-			sx += V_[n << 2];
-			sy += V_[(n << 2) + 1];
-			sz += V_[(n << 2) + 2];
-		}
-
-		sx /= static_cast<double>(NumAtom_);
-		sy /= static_cast<double>(NumAtom_);
-		sz /= static_cast<double>(NumAtom_);
-
-		// 重心の並進運動を避けるために、速度の和がゼロになるように補正
-		for (auto n = 0; n < NumAtom_; n++) {
-			V_[n << 2] -= sx;
-			V_[(n << 2) + 1] -= sy;
-			V_[(n << 2) + 2] -= sz;
-		}
-	}
-
-	template<>
-	inline void Ar_moleculardynamics::MD_initVel<UseAVX::False>()
-	{
-		auto const v = std::sqrt(3.0 * Tg_);
-
-		myrandom::MyRand mr(-1.0, 1.0);
-
-		for (auto n = 0; n < NumAtom_; n++) {
-			double rndX = mr.myrand();
-			double rndY = mr.myrand();
-			double rndZ = mr.myrand();
-			double tmp = 1.0 / std::sqrt(norm2(rndX, rndY, rndZ));
-			rndX *= tmp;
-			rndY *= tmp;
-			rndZ *= tmp;
-
-			// 方向はランダムに与える
-			VX_[n] = v * rndX;
-			VY_[n] = v * rndY;
-			VZ_[n] = v * rndZ;
-		}
-
-		auto sx = 0.0;
-		auto sy = 0.0;
-		auto sz = 0.0;
-
-		for (auto n = 0; n < NumAtom_; n++) {
-			sx += VX_[n];
-			sy += VY_[n];
-			sz += VZ_[n];
-		}
-
-		sx /= static_cast<double>(NumAtom_);
-		sy /= static_cast<double>(NumAtom_);
-		sz /= static_cast<double>(NumAtom_);
-
-		// 重心の並進運動を避けるために、速度の和がゼロになるように補正
-		for (auto n = 0; n < NumAtom_; n++) {
-			VX_[n] -= sx;
-			VY_[n] -= sy;
-			VZ_[n] -= sz;
-		}
-	}
-
-	// #endregion privateメンバ関数 
 }
 
 #endif      // _AR_MOLECULARDYNAMICS_H_
