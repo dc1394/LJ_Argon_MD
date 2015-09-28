@@ -288,19 +288,19 @@ namespace moleculardynamics {
 		/*!
 			n個目の原子に働く力のx成分
 		*/
-		std::vector<double> FX;
+		std::vector<double> FX_;
 
 		//! A private member variable.
 		/*!
 			n個目の原子に働く力のy成分
 		*/
-		std::vector<double> FY;
+		std::vector<double> FY_;
 
 		//! A private member variable.
 		/*!
 			n個目の原子に働く力のz成分
 		*/
-		std::vector<double> FZ;
+		std::vector<double> FZ_;
 
 		//! A private member variable.
 		/*!
@@ -312,7 +312,7 @@ namespace moleculardynamics {
 		/*!
 			相互作用を計算するセルの個数
 		*/
-		std::int32_t const ncp = 2;
+		std::int32_t const ncp_ = 2;
 		
 		//! A private member variable.
 		/*!
@@ -330,25 +330,25 @@ namespace moleculardynamics {
 		/*!
 			カットオフ半径
 		*/
-		double const rc = 2.5;
+		double const rc_ = 2.5;
 
 		//! A private member variable (constant).
 		/*!
 			カットオフ半径の2乗
 		*/
-		double const rc2;
+		double const rc2_;
 
 		//! A private member variable (constant).
 		/*!
 			カットオフ半径の逆数の6乗
 		*/
-		double const rcm6;
+		double const rcm6_;
 
 		//! A private member variable (constant).
 		/*!
 			カットオフ半径の逆数の12乗
 		*/
-		double const rcm12;
+		double const rcm12_;
 
 		//! A private member variable.
 		/*!
@@ -360,7 +360,7 @@ namespace moleculardynamics {
 		/*!
 			時間	
 		*/
-		double t;
+		double t_;
 
 		//! A private member variable.
 		/*!
@@ -378,25 +378,25 @@ namespace moleculardynamics {
 		/*!
 			ポテンシャルエネルギーの打ち切り
 		*/
-        double const Vrc;
+        double const Vrc_;
         
 		//! A private member variable.
 		/*!
 			n個目の原子の速度のx成分
 		*/
-		std::vector<double> VX;
+		std::vector<double> VX_;
 
 		//! A private member variable.
 		/*!
 			n個目の原子の速度のy成分
 		*/
-		std::vector<double> VY;
+		std::vector<double> VY_;
 
 		//! A private member variable.
 		/*!
 			n個目の原子の速度のz成分
 		*/
-		std::vector<double> VZ;
+		std::vector<double> VZ_;
 		        
 		//! A private member variable.
 		/*!
@@ -408,7 +408,7 @@ namespace moleculardynamics {
 		/*!
 			n個目の原子の初期x座標
 		*/
-		std::vector<double> X1;
+		std::vector<double> X1_;
 		
 		//! A private member variable.
 		/*!
@@ -420,7 +420,7 @@ namespace moleculardynamics {
 		/*!
 			n個目の原子の初期y座標
 		*/
-		std::vector<double> Y1;
+		std::vector<double> Y1_;
 		
 		//! A private member variable.
 		/*!
@@ -432,7 +432,7 @@ namespace moleculardynamics {
 		/*!
 			n個目の原子の初期z座標
 		*/
-		std::vector<double> Z1;
+		std::vector<double> Z1_;
 
 		// #endregion メンバ変数
 

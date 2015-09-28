@@ -102,12 +102,6 @@
     <ClInclude Include="myrandom\myrand.h">
       <Filter>myrandom</Filter>
     </ClInclude>
-    <ClInclude Include="moleculardynamics\useavx.h">
-      <Filter>moleculardynamics</Filter>
-    </ClInclude>
-    <ClInclude Include="utility\aligned_allocator.h">
-      <Filter>utility</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LJ_Argon_MD.cpp" />

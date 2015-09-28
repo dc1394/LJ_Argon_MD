@@ -314,14 +314,8 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
 			modNc = false;
 		}
 
-		if (armd.useavx) {
-			armd.Calc_Forces<moleculardynamics::UseAVX::True>();
-			armd.Move_Atoms<moleculardynamics::UseAVX::True>();
-		}
-		else {
-			armd.Calc_Forces<moleculardynamics::UseAVX::False>();
-			armd.Move_Atoms<moleculardynamics::UseAVX::False>();
-		}
+		armd.Calc_Forces();
+		armd.Move_Atoms();
 
         // Clear render target and the depth stencil 
         pd3dDevice->ClearRenderTargetView(DXUTGetD3D10RenderTargetView(), clearColor);
