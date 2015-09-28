@@ -365,20 +365,12 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
             g_pColorVariable->SetFloatVector(color);
 
             D3DXMATRIX World;
-			if (armd.useavx) {
-				D3DXMatrixTranslation(
-					&World,
-					boost::numeric_cast<float>(armd.C()[i << 2]) - pos,
-					boost::numeric_cast<float>(armd.C()[(i << 2) + 1]) - pos,
-					boost::numeric_cast<float>(armd.C()[(i << 2) + 2]) - pos);
-			}
-			else {
-				D3DXMatrixTranslation(
-					&World,
-					boost::numeric_cast<float>(armd.X()[i]) - pos,
-					boost::numeric_cast<float>(armd.Y()[i]) - pos,
-					boost::numeric_cast<float>(armd.Z()[i]) - pos);
-			}
+			D3DXMatrixTranslation(
+				&World,
+				boost::numeric_cast<float>(armd.X()[i]) - pos,
+				boost::numeric_cast<float>(armd.Y()[i]) - pos,
+				boost::numeric_cast<float>(armd.Z()[i]) - pos);
+			
             D3DXMatrixMultiply(&World, &(*g_Camera.GetWorldMatrix()), &World);
 
             // Update variables

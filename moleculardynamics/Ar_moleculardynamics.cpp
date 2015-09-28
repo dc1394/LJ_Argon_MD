@@ -433,10 +433,5 @@ namespace moleculardynamics {
 		periodiclen_ = lat_ * static_cast<double>(Nc_);
 	}
 
-	double Ar_moleculardynamics::norm2(double x, double y, double z) const
-	{
-		return (x * x + y * y + z * z);
-	}
-
 	// #endregion privateメンバ関数
 }

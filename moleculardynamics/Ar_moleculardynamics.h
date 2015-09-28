@@ -148,7 +148,10 @@ namespace moleculardynamics {
 			\param z z座標
 			\return ノルムの二乗
 		*/
-		double norm2(double x, double y, double z) const;
+		double norm2(double x, double y, double z) const
+		{
+			return (x * x + y * y + z * z);
+		}
 
 		// #endregion privateメンバ関数
 
