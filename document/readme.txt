@@ -62,7 +62,7 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------------
 
-　SchracVisualizeにはMicrosoft社によるDXUTライブラリを使用しています。
+　LJ_Argon_MDにはMicrosoft社によるDXUTライブラリを使用しています。
 　こちらのライセンスは以下になります。
 
 /*
@@ -145,7 +145,7 @@ Elle s’applique également, même si Microsoft connaissait ou devrait connaît
 EFFET JURIDIQUE.  Le présent contrat décrit certains droits juridiques. Vous pourriez avoir d’autres droits prévus par les lois de votre pays.  Le présent contrat ne modifie pas les droits que vous confèrent les lois de votre pays si celles-ci ne le permettent pas.
 */
 
-  SchracVisualizeにはBoostコミュニティによるBoost C++ Librariesを使用しています。
+  LJ_Argon_MDにはBoostコミュニティによるBoost C++ Librariesを使用しています。
   こちらのライセンスは Boostライセンス になります。
 
 /* Boost Software License - Version 1.0 - August 17th, 2003
