@@ -13,7 +13,9 @@
 
 ★更新履歴
 　2015/9/7  ver.0.1   とりあえず公開。
-　2015/9/29 ver.0.11  ボトルネックになっている部分をinline関数にして、またスタティックリンクするようにした。
+　2015/9/29 ver.0.11  ボトルネックになっている部分をinline関数にして、またスタテ
+　ィックリンクするようにした。
+　2015/10/1 ver.0.12　エネルギーを計算するようにした。
 
 ★ライセンス
 　このソフトはフリーソフトウェアです（2条項BSDライセンス）。
@@ -139,7 +141,7 @@ Elle s’applique également, même si Microsoft connaissait ou devrait connaît
 EFFET JURIDIQUE.  Le présent contrat décrit certains droits juridiques. Vous pourriez avoir d’autres droits prévus par les lois de votre pays.  Le présent contrat ne modifie pas les droits que vous confèrent les lois de votre pays si celles-ci ne le permettent pas.
 */
 
-  SchracVisualizeにはBoostコミュニティによるBoost C++ Librariesを使用しています。
+  LJ_Argon_MDにはBoostコミュニティによるBoost C++ Librariesを使用しています。
   こちらのライセンスは Boostライセンス になります。
 
 /* Boost Software License - Version 1.0 - August 17th, 2003
