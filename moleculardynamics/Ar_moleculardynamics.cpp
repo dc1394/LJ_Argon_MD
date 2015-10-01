@@ -24,6 +24,8 @@ namespace moleculardynamics {
 
 	double const Ar_moleculardynamics::DT = 0.001;
 
+	double const Ar_moleculardynamics::HARTREE = 4.35974465054E-18;
+
     double const Ar_moleculardynamics::KB = 1.3806488E-23;
 
     double const Ar_moleculardynamics::SIGMA = 3.405E-10;
@@ -43,6 +45,9 @@ namespace moleculardynamics {
 		Nc([this] { return Nc_; }, nullptr),
 		NumAtom([this] { return NumAtom_; }, nullptr),
 		periodiclen([this] { return periodiclen_; }, nullptr),
+		Uk([this] { return DimensionlessToHartree(Uk_); }, nullptr),
+		Up([this] { return DimensionlessToHartree(Up_); }, nullptr),
+		Utot([this] { return DimensionlessToHartree(Utot_); }, nullptr),
 		X([this] { return std::cref(X_); }, nullptr),
 		Y([this] { return std::cref(Y_); }, nullptr),
 		Z([this] { return std::cref(Z_); }, nullptr),
@@ -79,11 +84,15 @@ namespace moleculardynamics {
 
     void Ar_moleculardynamics::Calc_Forces()
     {
+		// 各原子に働く力の初期化
         for (auto n = 0; n < NumAtom_; n++) {
             FX_[n] = 0.0;
             FY_[n] = 0.0;
             FZ_[n] = 0.0;
         }
+		
+		// ポテンシャルエネルギーの初期化
+		Up_.store(0.0);
 
 		tbb::parallel_for(
 			0,
@@ -120,6 +129,9 @@ namespace moleculardynamics {
 									FX_[n] += dx / r * Fr;
 									FY_[n] += dy / r * Fr;
 									FZ_[n] += dz / r * Fr;
+
+									// エネルギーの計算、ただし二重計算のために0.5をかけておく
+									Up_.store(Up_ + 0.5 * (4.0 * (rm12 - rm6) - Vrc_));
 								}
 							}
 						}
@@ -142,12 +154,12 @@ namespace moleculardynamics {
 
 	double Ar_moleculardynamics::getLatticeconst() const
 	{
-		return Ar_moleculardynamics::SIGMA * lat_ * 1.0E+10;
+		return Ar_moleculardynamics::SIGMA * lat_ * 1.0E+9;
 	}
 
 	double Ar_moleculardynamics::getPeriodiclen() const
 	{
-		return Ar_moleculardynamics::SIGMA * periodiclen_ * 1.0E+10;
+		return Ar_moleculardynamics::SIGMA * periodiclen_ * 1.0E+9;
 	}
 
     double Ar_moleculardynamics::getTcalc() const
@@ -162,19 +174,22 @@ namespace moleculardynamics {
 
     void Ar_moleculardynamics::Move_Atoms()
     {
-        // calculate temperture
-        auto Uk = 0.0;
+		// 運動エネルギーの初期化
+		Uk_ = 0.0;
 
+		// calculate temperture
         for (auto n = 0; n < NumAtom_; n++) {
-            auto const v2 = norm2(VX_[n], VY_[n], VZ_[n]);
-            Uk += v2;
+			Uk_ += norm2(VX_[n], VY_[n], VZ_[n]);
         }
 
         // 運動エネルギーの計算
-        Uk *= 0.5;
+        Uk_ *= 0.5;
+
+		// 全エネルギー（運動エネルギー+ポテンシャルエネルギー）の計算
+		Utot_ = Uk_ + Up_;
 
         // 温度の計算
-        Tc_ = Uk / (1.5 * static_cast<double>(NumAtom_));
+        Tc_ = Uk_ / (1.5 * static_cast<double>(NumAtom_));
 
         auto const s = std::sqrt((Tg_ + Ar_moleculardynamics::ALPHA * (Tc_ - Tg_)) / Tc_);
 		
@@ -216,10 +231,7 @@ namespace moleculardynamics {
 				NumAtom_,
 				1,
 				[this, s](std::int32_t n) {
-				std::array<double, 3> rtmp;
-				rtmp[0] = X_[n];
-				rtmp[1] = Y_[n];
-				rtmp[2] = Z_[n];
+				std::array<double, 3> rtmp = { X_[n], Y_[n], Z_[n] };
 
 				// update coordinates and velocity
 				// Verlet法の座標更新式において速度成分を抜き出し、その部分をスケールする
@@ -320,6 +332,11 @@ namespace moleculardynamics {
     // #endregion publicメンバ関数
 
 	// #region privateメンバ関数
+
+	double Ar_moleculardynamics::DimensionlessToHartree(double e) const
+	{
+		return e * Ar_moleculardynamics::YPSILON / Ar_moleculardynamics::HARTREE;
+	}
 
 	void Ar_moleculardynamics::MD_initPos()
 	{

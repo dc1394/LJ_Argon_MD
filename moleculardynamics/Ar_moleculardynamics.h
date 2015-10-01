@@ -14,6 +14,7 @@
 #include <array>					// for std::array
 #include <cstdint>					// for std::int32_t
 #include <vector>					// for std::vector
+#include <tbb/atomic.h>				// for tbb::atomic
 
 namespace moleculardynamics {
 	using namespace utility;
@@ -124,6 +125,14 @@ namespace moleculardynamics {
 	private:
 		//! A private member function.
 		/*!
+			エネルギーの単位を無次元単位からHartreeに変換する
+			\param e 無次元単位で表されたエネルギー
+			\return Hartree単位で表されたエネルギー
+		*/
+		double DimensionlessToHartree(double e) const;
+		
+		//! A private member function.
+		/*!
 			原子の初期位置を決める
 		*/
 		void MD_initPos();
@@ -184,6 +193,24 @@ namespace moleculardynamics {
 		
 		//! A property.
 		/*!
+			運動エネルギーへのプロパティ
+		*/
+		Property<double> const Uk;
+
+		//! A property.
+		/*!
+			ポテンシャルエネルギーへのプロパティ
+		*/
+		Property<double> const Up;
+
+		//! A property.
+		/*!
+			全エネルギーへのプロパティ
+		*/
+		Property<double> const Utot;
+
+		//! A property.
+		/*!
 			n番目の原子のx座標へのプロパティ
 		*/
 		Property<std::vector<double> const &> const X;
@@ -241,7 +268,13 @@ namespace moleculardynamics {
 			時間刻みΔt
 		*/
 		static double const DT;
-				
+		
+		//! A private member variable (constant).
+		/*!
+			1Hartree
+		*/
+		static double const HARTREE;
+		
 		//! A private member variable (constant).
         /*!
             ボルツマン定数
@@ -373,6 +406,24 @@ namespace moleculardynamics {
 			与える温度Tgiven
 		*/
         double Tg_;
+		
+		//! A private member variable (constant).
+		/*!
+			運動エネルギー
+		*/
+		double Uk_;
+
+		//! A private member variable (constant).
+		/*!
+			ポテンシャルエネルギー
+		*/
+		tbb::atomic<double> Up_;
+
+		//! A private member variable (constant).
+		/*!
+			全エネルギー
+		*/
+		double Utot_;
 
 		//! A private member variable (constant).
 		/*!

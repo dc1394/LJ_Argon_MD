@@ -744,10 +744,13 @@ void RenderText(ID3D10Device* pd3dDevice)
 	txthelper->DrawTextLine((boost::wformat(L"スーパーセルの個数: %d") % armd.Nc).str().c_str());
 	txthelper->DrawTextLine((boost::wformat(L"MDのステップ数: %d") % armd.MD_iter).str().c_str());
 	txthelper->DrawTextLine((boost::wformat(L"経過時間: %.3f (ps)") % armd.getDeltat()).str().c_str());
-	txthelper->DrawTextLine((boost::wformat(L"格子定数: %.3f (Å)") % armd.getLatticeconst()).str().c_str());
-	txthelper->DrawTextLine((boost::wformat(L"箱の一辺の長さ: %.3f (Å)")  % armd.getPeriodiclen()).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"格子定数: %.3f (pm)") % armd.getLatticeconst()).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"箱の一辺の長さ: %.3f (pm)")  % armd.getPeriodiclen()).str().c_str());
 	txthelper->DrawTextLine((boost::wformat(L"設定された温度: %.3f (K)") % armd.getTgiven()).str().c_str());
 	txthelper->DrawTextLine((boost::wformat(L"計算された温度: %.3f (K)") % armd.getTcalc()).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"運動エネルギー: %.3f (Hartree)") % armd.Uk).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"ポテンシャルエネルギー: %.3f (Hartree)") % armd.Up).str().c_str());
+	txthelper->DrawTextLine((boost::wformat(L"全エネルギー: %.3f (Hartree)") % armd.Utot).str().c_str());
 	txthelper->DrawTextLine(L"原子の色の違いは働いている力の違いを表す");
 	txthelper->DrawTextLine(L"赤色に近いほどその原子に働いている力が強い");
 	txthelper->End();
