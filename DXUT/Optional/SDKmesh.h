@@ -64,7 +64,7 @@ enum SDKMESH_INDEX_TYPE
 enum FRAME_TRANSFORM_TYPE
 {
     FTT_RELATIVE = 0,
-    FTT_ABSOLUTE,		//This is not currently used but is here to support absolute transformations in the future
+    FTT_ABSOLUTE,        //This is not currently used but is here to support absolute transformations in the future
 };
 
 //--------------------------------------------------------------------------------------
@@ -104,10 +104,10 @@ struct SDKMESH_VERTEX_BUFFER_HEADER
     D3DVERTEXELEMENT9 Decl[MAX_VERTEX_ELEMENTS];
     union
     {
-        UINT64 DataOffset;				//(This also forces the union to 64bits)
+        UINT64 DataOffset;                //(This also forces the union to 64bits)
         IDirect3DVertexBuffer9* pVB9;
 #ifdef D3D10_SDK_VERSION
-        ID3D10Buffer*			pVB10;
+        ID3D10Buffer*            pVB10;
 #endif
     };
 };
@@ -119,10 +119,10 @@ struct SDKMESH_INDEX_BUFFER_HEADER
     UINT IndexType;
     union
     {
-        UINT64 DataOffset;				//(This also forces the union to 64bits)
+        UINT64 DataOffset;                //(This also forces the union to 64bits)
         IDirect3DIndexBuffer9* pIB9;
 #ifdef D3D10_SDK_VERSION
-        ID3D10Buffer*			pIB10;
+        ID3D10Buffer*            pIB10;
 #endif
     };
 };
@@ -141,8 +141,8 @@ struct SDKMESH_MESH
 
     union
     {
-        UINT64 SubsetOffset;	//Offset to list of subsets (This also forces the union to 64bits)
-        UINT* pSubsets;	    //Pointer to list of subsets
+        UINT64 SubsetOffset;    //Offset to list of subsets (This also forces the union to 64bits)
+        UINT* pSubsets;        //Pointer to list of subsets
     };
     union
     {
@@ -170,7 +170,7 @@ struct SDKMESH_FRAME
     UINT ChildFrame;
     UINT SiblingFrame;
     D3DXMATRIX Matrix;
-    UINT AnimationDataIndex;		//Used to index which set of keyframes transforms this frame
+    UINT AnimationDataIndex;        //Used to index which set of keyframes transforms this frame
 };
 
 struct SDKMESH_MATERIAL
@@ -193,48 +193,48 @@ struct SDKMESH_MATERIAL
 
     union
     {
-        UINT64 Force64_1;			//Force the union to 64bits
+        UINT64 Force64_1;            //Force the union to 64bits
         IDirect3DTexture9* pDiffuseTexture9;
 #ifdef D3D10_SDK_VERSION
-        ID3D10Texture2D*			pDiffuseTexture10;
+        ID3D10Texture2D*            pDiffuseTexture10;
 #endif
     };
     union
     {
-        UINT64 Force64_2;			//Force the union to 64bits
+        UINT64 Force64_2;            //Force the union to 64bits
         IDirect3DTexture9* pNormalTexture9;
 #ifdef D3D10_SDK_VERSION
-        ID3D10Texture2D*			pNormalTexture10;
+        ID3D10Texture2D*            pNormalTexture10;
 #endif
     };
     union
     {
-        UINT64 Force64_3;			//Force the union to 64bits
+        UINT64 Force64_3;            //Force the union to 64bits
         IDirect3DTexture9* pSpecularTexture9;
 #ifdef D3D10_SDK_VERSION
-        ID3D10Texture2D*			pSpecularTexture10;
+        ID3D10Texture2D*            pSpecularTexture10;
 #endif
     };
 
     union
     {
-        UINT64 Force64_4;			//Force the union to 64bits
+        UINT64 Force64_4;            //Force the union to 64bits
 #ifdef D3D10_SDK_VERSION
-        ID3D10ShaderResourceView*	pDiffuseRV10;
+        ID3D10ShaderResourceView*    pDiffuseRV10;
 #endif
     };
     union
     {
-        UINT64 Force64_5;		    //Force the union to 64bits
+        UINT64 Force64_5;            //Force the union to 64bits
 #ifdef D3D10_SDK_VERSION
-        ID3D10ShaderResourceView*	pNormalRV10;
+        ID3D10ShaderResourceView*    pNormalRV10;
 #endif
     };
     union
     {
-        UINT64 Force64_6;			//Force the union to 64bits
+        UINT64 Force64_6;            //Force the union to 64bits
 #ifdef D3D10_SDK_VERSION
-        ID3D10ShaderResourceView*	pSpecularRV10;
+        ID3D10ShaderResourceView*    pSpecularRV10;
 #endif
     };
 

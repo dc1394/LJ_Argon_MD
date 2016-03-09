@@ -13,65 +13,65 @@
 class CImeUiFont_Base
 {
 public:
-	virtual void SetHeight( UINT uHeight ) { uHeight; }; // for backward compatibility
-	virtual void SetColor( DWORD color ) = 0;
-	virtual void SetPosition( int x, int y ) = 0;
-	virtual void GetTextExtent( LPCTSTR szText, DWORD* puWidth, DWORD* puHeight ) = 0;
-	virtual void DrawText( LPCTSTR pszText ) = 0;
+    virtual void SetHeight( UINT uHeight ) { uHeight; }; // for backward compatibility
+    virtual void SetColor( DWORD color ) = 0;
+    virtual void SetPosition( int x, int y ) = 0;
+    virtual void GetTextExtent( LPCTSTR szText, DWORD* puWidth, DWORD* puHeight ) = 0;
+    virtual void DrawText( LPCTSTR pszText ) = 0;
 };
 
 typedef struct
 {
-	// symbol (Henkan-kyu)
-	DWORD			symbolColor;
-	DWORD			symbolColorOff;
-	DWORD			symbolColorText;
-	BYTE			symbolHeight;
-	BYTE			symbolTranslucence;
-	BYTE			symbolPlacement;
-	CImeUiFont_Base*	symbolFont;
+    // symbol (Henkan-kyu)
+    DWORD            symbolColor;
+    DWORD            symbolColorOff;
+    DWORD            symbolColorText;
+    BYTE            symbolHeight;
+    BYTE            symbolTranslucence;
+    BYTE            symbolPlacement;
+    CImeUiFont_Base*    symbolFont;
 
-	// candidate list
-	DWORD			candColorBase;
-	DWORD			candColorBorder;
-	DWORD			candColorText;
+    // candidate list
+    DWORD            candColorBase;
+    DWORD            candColorBorder;
+    DWORD            candColorText;
 
-	// composition string
-	DWORD			compColorInput;
-	DWORD			compColorTargetConv;
-	DWORD			compColorConverted;
-	DWORD			compColorTargetNotConv;
-	DWORD			compColorInputErr;
-	BYTE			compTranslucence;
-	DWORD			compColorText;
+    // composition string
+    DWORD            compColorInput;
+    DWORD            compColorTargetConv;
+    DWORD            compColorConverted;
+    DWORD            compColorTargetNotConv;
+    DWORD            compColorInputErr;
+    BYTE            compTranslucence;
+    DWORD            compColorText;
 
-	// caret
-	BYTE			caretWidth;
-	BYTE			caretYMargin;
+    // caret
+    BYTE            caretWidth;
+    BYTE            caretYMargin;
 } IMEUI_APPEARANCE;
 
-typedef struct	// D3DTLVERTEX compatible
+typedef struct    // D3DTLVERTEX compatible
 {
-	float sx; 
-	float sy; 
-	float sz; 
-	float rhw;
-	DWORD color; 
-	DWORD specular; 
-	float tu; 
-	float tv; 
+    float sx; 
+    float sy; 
+    float sz; 
+    float rhw;
+    DWORD color; 
+    DWORD specular; 
+    float tu; 
+    float tv; 
 } IMEUI_VERTEX;
 
 // IME States
-#define IMEUI_STATE_OFF		0
-#define IMEUI_STATE_ON		1
-#define IMEUI_STATE_ENGLISH	2
+#define IMEUI_STATE_OFF        0
+#define IMEUI_STATE_ON        1
+#define IMEUI_STATE_ENGLISH    2
 
 // IME const
 #define MAX_CANDLIST 10
 
 // IME Flags
-#define IMEUI_FLAG_SUPPORT_CARET	0x00000001
+#define IMEUI_FLAG_SUPPORT_CARET    0x00000001
 
 bool ImeUi_Initialize( HWND hwnd, bool bDisable = false );
 void ImeUi_Uninitialize();
@@ -97,20 +97,20 @@ UINT ImeUi_GetInputCodePage();
 DWORD ImeUi_GetFlags();
 void ImeUi_SetFlags( DWORD dwFlags, bool bSet );
 
-WORD	ImeUi_GetPrimaryLanguage();
-DWORD	ImeUi_GetImeId(UINT uIndex);
-WORD	ImeUi_GetLanguage();
-LPTSTR	ImeUi_GetIndicatior();
-bool	ImeUi_IsShowReadingWindow();
-bool	ImeUi_IsShowCandListWindow();
-bool	ImeUi_IsVerticalCand();
-bool	ImeUi_IsHorizontalReading();
-TCHAR*	ImeUi_GetCandidate(UINT idx);
-TCHAR*	ImeUi_GetCompositionString();
-DWORD	ImeUi_GetCandidateSelection();
-DWORD	ImeUi_GetCandidateCount();
-BYTE*	ImeUi_GetCompStringAttr();
-DWORD	ImeUi_GetImeCursorChars();
+WORD    ImeUi_GetPrimaryLanguage();
+DWORD    ImeUi_GetImeId(UINT uIndex);
+WORD    ImeUi_GetLanguage();
+LPTSTR    ImeUi_GetIndicatior();
+bool    ImeUi_IsShowReadingWindow();
+bool    ImeUi_IsShowCandListWindow();
+bool    ImeUi_IsVerticalCand();
+bool    ImeUi_IsHorizontalReading();
+TCHAR*    ImeUi_GetCandidate(UINT idx);
+TCHAR*    ImeUi_GetCompositionString();
+DWORD    ImeUi_GetCandidateSelection();
+DWORD    ImeUi_GetCandidateCount();
+BYTE*    ImeUi_GetCompStringAttr();
+DWORD    ImeUi_GetImeCursorChars();
 
 extern void  (CALLBACK *ImeUiCallback_DrawRect )( int x1, int y1, int x2, int y2, DWORD color );
 extern void* (__cdecl *ImeUiCallback_Malloc )( size_t bytes );

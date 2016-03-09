@@ -526,7 +526,7 @@ HRESULT CDXUTResourceCache::CreateTextureFromFileEx( ID3D10Device* pDevice, LPCT
                                                      ID3D10ShaderResourceView** ppOutputRV, bool bSRGB )
 {
     HRESULT hr = S_OK;
-    D3DX10_IMAGE_LOAD_INFO ZeroInfo;	//D3DX10_IMAGE_LOAD_INFO has a default constructor
+    D3DX10_IMAGE_LOAD_INFO ZeroInfo;    //D3DX10_IMAGE_LOAD_INFO has a default constructor
     D3DX10_IMAGE_INFO SrcInfo;
 
     if( !pLoadInfo )

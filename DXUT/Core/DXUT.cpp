@@ -245,8 +245,8 @@ protected:
         int m_OverrideForceVsync;         // if == 0, then it will force the app to use D3DPRESENT_INTERVAL_IMMEDIATE, if == 1 force use of D3DPRESENT_INTERVAL_DEFAULT
         bool m_OverrideRelaunchMCE;          // if true, then force relaunch of MCE at exit
         bool m_AppCalledWasKeyPressed;      // true if the app ever calls DXUTWasKeyPressed().  Allows for optimzation
-        bool m_ReleasingSwapChain;		  // if true, the app is releasing its swapchain
-        bool m_IsInGammaCorrectMode;		// Tell DXUTRes and DXUTMisc that we are in gamma correct mode
+        bool m_ReleasingSwapChain;          // if true, the app is releasing its swapchain
+        bool m_IsInGammaCorrectMode;        // Tell DXUTRes and DXUTMisc that we are in gamma correct mode
 
         LPDXUTCALLBACKMODIFYDEVICESETTINGS m_ModifyDeviceSettingsFunc; // modify Direct3D device settings callback
         LPDXUTCALLBACKDEVICEREMOVED m_DeviceRemovedFunc;        // Direct3D device removed callback
@@ -908,9 +908,9 @@ void DXUTParseCommandLine( __inout WCHAR* strCommandLine,
                 continue;
             }
 
-			if( DXUTIsNextArg( strCmdLine, L"forcewarp" ) )
+            if( DXUTIsNextArg( strCmdLine, L"forcewarp" ) )
             {
-				GetDXUTState().SetOverrideForceWARP( true );
+                GetDXUTState().SetOverrideForceWARP( true );
                 continue;
             }
 
@@ -2508,60 +2508,60 @@ HRESULT DXUTChangeDevice( DXUTDeviceSettings* pNewDeviceSettings,
             miAdapter.cbSize = sizeof( MONITORINFO );
             hAdapterMonitor = DXUTGetMonitorFromAdapter( pNewDeviceSettings );
 
-			DXUTGetMonitorInfo( hAdapterMonitor, &miAdapter);
+            DXUTGetMonitorInfo( hAdapterMonitor, &miAdapter);
 
-			// Get the rect of the monitor attached to the window
-			MONITORINFO miWindow;
-			miWindow.cbSize = sizeof( MONITORINFO );
-			DXUTGetMonitorInfo( DXUTMonitorFromWindow( DXUTGetHWND(), MONITOR_DEFAULTTOPRIMARY ), &miWindow );
+            // Get the rect of the monitor attached to the window
+            MONITORINFO miWindow;
+            miWindow.cbSize = sizeof( MONITORINFO );
+            DXUTGetMonitorInfo( DXUTMonitorFromWindow( DXUTGetHWND(), MONITOR_DEFAULTTOPRIMARY ), &miWindow );
 
-			// Do something reasonable if the BackBuffer size is greater than the monitor size
-			int nAdapterMonitorWidth = miAdapter.rcWork.right - miAdapter.rcWork.left;
-			int nAdapterMonitorHeight = miAdapter.rcWork.bottom - miAdapter.rcWork.top;
+            // Do something reasonable if the BackBuffer size is greater than the monitor size
+            int nAdapterMonitorWidth = miAdapter.rcWork.right - miAdapter.rcWork.left;
+            int nAdapterMonitorHeight = miAdapter.rcWork.bottom - miAdapter.rcWork.top;
 
-			int nClientWidth = DXUTGetBackBufferWidthFromDS( pNewDeviceSettings );
-			int nClientHeight = DXUTGetBackBufferHeightFromDS( pNewDeviceSettings );
+            int nClientWidth = DXUTGetBackBufferWidthFromDS( pNewDeviceSettings );
+            int nClientHeight = DXUTGetBackBufferHeightFromDS( pNewDeviceSettings );
 
-			// Get the rect of the window
-			RECT rcWindow;
-			GetWindowRect( DXUTGetHWNDDeviceWindowed(), &rcWindow );
+            // Get the rect of the window
+            RECT rcWindow;
+            GetWindowRect( DXUTGetHWNDDeviceWindowed(), &rcWindow );
 
-			// Make a window rect with a client rect that is the same size as the backbuffer
-			RECT rcResizedWindow;
-			rcResizedWindow.left = 0;
-			rcResizedWindow.right = nClientWidth;
-			rcResizedWindow.top = 0;
-			rcResizedWindow.bottom = nClientHeight;
-			AdjustWindowRect( &rcResizedWindow, GetWindowLong( DXUTGetHWNDDeviceWindowed(), GWL_STYLE ),
-							  GetDXUTState().GetMenu() != NULL );
+            // Make a window rect with a client rect that is the same size as the backbuffer
+            RECT rcResizedWindow;
+            rcResizedWindow.left = 0;
+            rcResizedWindow.right = nClientWidth;
+            rcResizedWindow.top = 0;
+            rcResizedWindow.bottom = nClientHeight;
+            AdjustWindowRect( &rcResizedWindow, GetWindowLong( DXUTGetHWNDDeviceWindowed(), GWL_STYLE ),
+                              GetDXUTState().GetMenu() != NULL );
 
-			int nWindowWidth = rcResizedWindow.right - rcResizedWindow.left;
-			int nWindowHeight = rcResizedWindow.bottom - rcResizedWindow.top;
+            int nWindowWidth = rcResizedWindow.right - rcResizedWindow.left;
+            int nWindowHeight = rcResizedWindow.bottom - rcResizedWindow.top;
 
-			if( nWindowWidth > nAdapterMonitorWidth )
-				nWindowWidth = nAdapterMonitorWidth;
-			if( nWindowHeight > nAdapterMonitorHeight )
-				nWindowHeight = nAdapterMonitorHeight;
+            if( nWindowWidth > nAdapterMonitorWidth )
+                nWindowWidth = nAdapterMonitorWidth;
+            if( nWindowHeight > nAdapterMonitorHeight )
+                nWindowHeight = nAdapterMonitorHeight;
 
-			if( rcResizedWindow.left < miAdapter.rcWork.left ||
-				rcResizedWindow.top < miAdapter.rcWork.top ||
-				rcResizedWindow.right > miAdapter.rcWork.right ||
-				rcResizedWindow.bottom > miAdapter.rcWork.bottom )
-			{
-				int nWindowOffsetX = ( nAdapterMonitorWidth - nWindowWidth ) / 2;
-				int nWindowOffsetY = ( nAdapterMonitorHeight - nWindowHeight ) / 2;
+            if( rcResizedWindow.left < miAdapter.rcWork.left ||
+                rcResizedWindow.top < miAdapter.rcWork.top ||
+                rcResizedWindow.right > miAdapter.rcWork.right ||
+                rcResizedWindow.bottom > miAdapter.rcWork.bottom )
+            {
+                int nWindowOffsetX = ( nAdapterMonitorWidth - nWindowWidth ) / 2;
+                int nWindowOffsetY = ( nAdapterMonitorHeight - nWindowHeight ) / 2;
 
-				rcResizedWindow.left = miAdapter.rcWork.left + nWindowOffsetX;
-				rcResizedWindow.top = miAdapter.rcWork.top + nWindowOffsetY;
-				rcResizedWindow.right = miAdapter.rcWork.left + nWindowOffsetX + nWindowWidth;
-				rcResizedWindow.bottom = miAdapter.rcWork.top + nWindowOffsetY + nWindowHeight;
-			}
+                rcResizedWindow.left = miAdapter.rcWork.left + nWindowOffsetX;
+                rcResizedWindow.top = miAdapter.rcWork.top + nWindowOffsetY;
+                rcResizedWindow.right = miAdapter.rcWork.left + nWindowOffsetX + nWindowWidth;
+                rcResizedWindow.bottom = miAdapter.rcWork.top + nWindowOffsetY + nWindowHeight;
+            }
 
-			// Resize the window.  It is important to adjust the window size 
-			// after resetting the device rather than beforehand to ensure 
-			// that the monitor resolution is correct and does not limit the size of the new window.
-			SetWindowPos( DXUTGetHWNDDeviceWindowed(), 0, rcResizedWindow.left, rcResizedWindow.top, nWindowWidth,
-						  nWindowHeight, SWP_NOZORDER );
+            // Resize the window.  It is important to adjust the window size 
+            // after resetting the device rather than beforehand to ensure 
+            // that the monitor resolution is correct and does not limit the size of the new window.
+            SetWindowPos( DXUTGetHWNDDeviceWindowed(), 0, rcResizedWindow.left, rcResizedWindow.top, nWindowWidth,
+                          nWindowHeight, SWP_NOZORDER );
         }
         else
         {
@@ -5340,7 +5340,7 @@ HRESULT WINAPI DXUTToggleWARP () {
     if( DXUTIsCurrentDeviceD3D9() )
     {
 
-	}
+    }
     else
     {
         ID3D10SwitchToRef* pD3D10STR = NULL;

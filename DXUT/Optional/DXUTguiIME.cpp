@@ -479,7 +479,7 @@ bool CDXUTIMEEditBox::MsgProc( UINT uMsg, WPARAM wParam, LPARAM lParam )
         case WM_DESTROY:
             ImeUi_Uninitialize();
             break;
-    }	
+    }    
 
     bool trappedData;
     bool* trapped = &trappedData;
@@ -928,7 +928,7 @@ void CDXUTIMEEditBox::Render( float fElapsedTime )
 
     ImeUi_RenderUI();
 
-    if( m_bHasFocus )	
+    if( m_bHasFocus )    
     {
         // Render the input locale indicator
         RenderIndicator( fElapsedTime );

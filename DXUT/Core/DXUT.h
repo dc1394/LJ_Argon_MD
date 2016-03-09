@@ -320,7 +320,7 @@ RECT      WINAPI DXUTGetFullsceenClientRectAtModeChange(); // Useful for returni
 double    WINAPI DXUTGetTime();
 float     WINAPI DXUTGetElapsedTime();
 bool      WINAPI DXUTIsWindowed();
-bool	  WINAPI DXUTIsInGammaCorrectMode();
+bool      WINAPI DXUTIsInGammaCorrectMode();
 float     WINAPI DXUTGetFPS();
 LPCWSTR   WINAPI DXUTGetWindowTitle();
 LPCWSTR   WINAPI DXUTGetFrameStats( bool bIncludeFPS = false );

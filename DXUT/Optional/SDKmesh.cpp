@@ -1265,7 +1265,7 @@ void CDXUTSDKMesh::Destroy()
                     {
                         m_pMaterialArray[m].pDiffuseRV10->GetResource( &pRes );
                         SAFE_RELEASE( pRes );
-                        SAFE_RELEASE( pRes );	// do this twice, because GetResource adds a ref
+                        SAFE_RELEASE( pRes );    // do this twice, because GetResource adds a ref
 
                         SAFE_RELEASE( m_pMaterialArray[m].pDiffuseRV10 );
                     }
@@ -1273,7 +1273,7 @@ void CDXUTSDKMesh::Destroy()
                     {
                         m_pMaterialArray[m].pNormalRV10->GetResource( &pRes );
                         SAFE_RELEASE( pRes );
-                        SAFE_RELEASE( pRes );	// do this twice, because GetResource adds a ref
+                        SAFE_RELEASE( pRes );    // do this twice, because GetResource adds a ref
 
                         SAFE_RELEASE( m_pMaterialArray[m].pNormalRV10 );
                     }
@@ -1281,7 +1281,7 @@ void CDXUTSDKMesh::Destroy()
                     {
                         m_pMaterialArray[m].pSpecularRV10->GetResource( &pRes );
                         SAFE_RELEASE( pRes );
-                        SAFE_RELEASE( pRes );	// do this twice, because GetResource adds a ref
+                        SAFE_RELEASE( pRes );    // do this twice, because GetResource adds a ref
 
                         SAFE_RELEASE( m_pMaterialArray[m].pSpecularRV10 );
                     }

@@ -2468,7 +2468,7 @@ HRESULT CD3D10Enumeration::Enumerate( LPDXUTCALLBACKISD3D10DEVICEACCEPTABLE IsD3
     if (m_AdapterInfoList.GetSize() == 0) {
 
 
-		CD3D10EnumAdapterInfo* pAdapterInfo = new CD3D10EnumAdapterInfo;
+        CD3D10EnumAdapterInfo* pAdapterInfo = new CD3D10EnumAdapterInfo;
         if( !pAdapterInfo )
         {
             return E_OUTOFMEMORY;
@@ -2547,7 +2547,7 @@ HRESULT CD3D10Enumeration::EnumerateOutputs( CD3D10EnumAdapterInfo* pAdapterInfo
         }
         else if( FAILED( hr ) )
         {
-            return hr;	//Something bad happened.
+            return hr;    //Something bad happened.
         }
         else //Success!
         {
@@ -2589,7 +2589,7 @@ HRESULT CD3D10Enumeration::EnumerateDisplayModes( CD3D10EnumOutputInfo* pOutputI
         {
             DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,     //This is DXUT's preferred mode
 
-            DXGI_FORMAT_R8G8B8A8_UNORM,			
+            DXGI_FORMAT_R8G8B8A8_UNORM,            
             DXGI_FORMAT_R16G16B16A16_FLOAT,
             DXGI_FORMAT_R10G10B10A2_UNORM
         };
@@ -2611,8 +2611,8 @@ HRESULT CD3D10Enumeration::EnumerateDisplayModes( CD3D10EnumOutputInfo* pOutputI
     for( int f = 0; f < allowedAdapterFormatArrayCount; ++f )
     {
         // Fast-path: Try to grab at least 512 modes.
-        //			  This is to avoid calling GetDisplayModeList more times than necessary.
-        //			  GetDisplayModeList is an expensive call.
+        //              This is to avoid calling GetDisplayModeList more times than necessary.
+        //              GetDisplayModeList is an expensive call.
         UINT NumModes = 512;
         DXGI_MODE_DESC* pDesc = new DXGI_MODE_DESC[ NumModes ];
         assert( pDesc );
@@ -2737,7 +2737,7 @@ HRESULT CD3D10Enumeration::EnumerateDevices( CD3D10EnumAdapterInfo* pAdapterInfo
         IDXGIAdapter* pAdapter = NULL;
         if( devTypeArray[iDeviceType] == D3D10_DRIVER_TYPE_HARDWARE )
             pAdapter = pAdapterInfo->m_pAdapter;
-		
+        
         HMODULE wrp = NULL;
         if (devTypeArray[iDeviceType] == D3D10_DRIVER_TYPE_SOFTWARE) wrp = LoadLibrary(L"D3D10WARP.dll");
 
@@ -2782,7 +2782,7 @@ HRESULT CD3D10Enumeration::EnumerateDeviceCombosNoAdapter(  CD3D10EnumAdapterInf
             {
                 DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,   //This is DXUT's preferred mode
 
-                DXGI_FORMAT_R8G8B8A8_UNORM,		
+                DXGI_FORMAT_R8G8B8A8_UNORM,        
                 DXGI_FORMAT_R16G16B16A16_FLOAT,
                 DXGI_FORMAT_R10G10B10A2_UNORM
             };
@@ -2863,7 +2863,7 @@ HRESULT CD3D10Enumeration::EnumerateDeviceCombos( IDXGIFactory* pFactory, CD3D10
                 {
                     DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,   //This is DXUT's preferred mode
 
-                    DXGI_FORMAT_R8G8B8A8_UNORM,		
+                    DXGI_FORMAT_R8G8B8A8_UNORM,        
                     DXGI_FORMAT_R16G16B16A16_FLOAT,
                     DXGI_FORMAT_R10G10B10A2_UNORM
                 };
