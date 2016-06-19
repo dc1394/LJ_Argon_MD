@@ -19,7 +19,6 @@
 #include <boost/assert.hpp>                         // for BOOST_ASSERT
 #include <boost/cast.hpp>                           // for boost::numeric_cast
 #include <boost/format.hpp>                         // for boost::wformat
-#include <boost/range/algorithm/max_element.hpp>    // for boost::max_element
 #include <tbb/task_scheduler_init.h>                // for tbb::task_scheduler_init
 
 //! A function.
@@ -432,14 +431,14 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
     // Find the D3DX effect file
     std::array<WCHAR, MAX_PATH> str;
     V_RETURN( DXUTFindDXSDKMediaFileCch( str.data(), MAX_PATH, L"LJ_Argon_MD.fx" ) );
-    DWORD dwShaderFlags = D3D10_SHADER_ENABLE_STRICTNESS;
+    auto dwShaderFlags = D3D10_SHADER_ENABLE_STRICTNESS;
+
 #if defined( DEBUG ) || defined( _DEBUG )
     dwShaderFlags |= D3D10_SHADER_DEBUG;
 #endif
 
     ID3D10Effect * pEffecttmp;
-    utility::v_return(
-        D3DX10CreateEffectFromFile(
+    V_RETURN( D3DX10CreateEffectFromFile(
             str.data(),
             nullptr,
             nullptr,
@@ -451,7 +450,7 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
             nullptr,
             &pEffecttmp,
             nullptr,
-            nullptr ) );
+            nullptr) );
     pEffect.reset(pEffecttmp);
 
     // Obtain the technique
@@ -474,12 +473,11 @@ HRESULT CALLBACK OnD3D10CreateDevice( ID3D10Device* pd3dDevice, const DXGI_SURFA
     g_pRender->GetPassByIndex( 0 )->GetDesc( &PassDesc );
 
     ID3D10InputLayout * pInputLayouttmp;
-    utility::v_return(
-        pd3dDevice->CreateInputLayout(
+    V_RETURN( pd3dDevice->CreateInputLayout(
             layout,
             sizeof(layout) / sizeof(layout[0]), 
             PassDesc.pIAInputSignature,
-            PassDesc.IAInputSignatureSize, &pInputLayouttmp ) );
+            PassDesc.IAInputSignatureSize, &pInputLayouttmp) );
     pInputLayout.reset(pInputLayouttmp);
 
     pd3dDevice->IASetInputLayout(pInputLayout.get());
@@ -752,7 +750,7 @@ void RenderText(ID3D10Device* pd3dDevice)
     txthelper->DrawTextLine((boost::wformat(L"ポテンシャルエネルギー: %.3f (Hartree)") % armd.Up).str().c_str());
     txthelper->DrawTextLine((boost::wformat(L"全エネルギー: %.3f (Hartree)") % armd.Utot).str().c_str());
     txthelper->DrawTextLine((boost::wformat(L"圧力: %.3f (atm)") % armd.getPressure()).str().c_str());
-        txthelper->DrawTextLine(L"原子の色の違いは働いている力の違いを表す");
+    txthelper->DrawTextLine(L"原子の色の違いは働いている力の違いを表す");
     txthelper->DrawTextLine(L"赤色に近いほどその原子に働いている力が強い");
     txthelper->End();
     pd3dDevice->IASetInputLayout(pInputLayout.get());
@@ -849,8 +847,8 @@ int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdL
     // ウィンドウを生成
     auto const dispx = ::GetSystemMetrics(SM_CXSCREEN);
     auto const dispy = ::GetSystemMetrics(SM_CYSCREEN);
-    auto const xpos = (dispx - WINDOWWIDTH) >> 1;
-    auto const ypos = (dispy - WINDOWHEIGHT) >> 1;
+    auto const xpos = (dispx - WINDOWWIDTH) / 2;
+    auto const ypos = (dispy - WINDOWHEIGHT) / 2;
     DXUTCreateWindow(L"アルゴンの古典分子動力学シミュレーション", nullptr, nullptr, nullptr, xpos, ypos);
     DXUTCreateDevice(true, WINDOWWIDTH, WINDOWHEIGHT);
 

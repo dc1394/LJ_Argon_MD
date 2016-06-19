@@ -10,8 +10,9 @@
 
 #pragma once
 
+#include <stdexcept>            // for std::runtime_error
+#include <string>               // for std::to_string
 #include <boost/cast.hpp>       // for boost::numeric_cast
-#include <boost/optional.hpp>   // for boost::optional
 #include <boost/utility.hpp>    // for boost::checked_delete
 
 namespace utility {
@@ -21,9 +22,8 @@ namespace utility {
         関数が成功したかどうかを判断する
         \tparam T 関数の戻り値の型
         \param x HRESULTの値
-        \return 成功したらboost::optional<HRESULT>、失敗したらboost::none
     */
-    boost::optional<HRESULT> v_return(T const & x);
+    void v_return(T const & x);
 
     template <typename T>
     //! A struct.
@@ -65,10 +65,12 @@ namespace utility {
         }
     };
 
-    template <typename T> boost::optional<HRESULT> v_return(T const & x)
+    template <typename T> void v_return(T const & x)
     {
         auto const hr = boost::numeric_cast<HRESULT>(x);
-        return hr >= 0 ? boost::optional<HRESULT>(hr) : boost::none;
+        if (hr < 0) {
+            throw std::runtime_error("function Failed! HRESULT: " + std::to_string(hr));
+        }
     }
 }
 
