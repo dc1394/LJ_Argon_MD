@@ -14,7 +14,6 @@
 #include <array>                    // for std::array
 #include <cstdint>                  // for std::int32_t
 #include <vector>                   // for std::vector
-#include <tbb/atomic.h>				// for tbb::atomic
 
 namespace moleculardynamics {
     using namespace utility;
@@ -73,6 +72,12 @@ namespace moleculardynamics {
         */
         double getPeriodiclen() const;
 
+        //! A public member function (constant).
+        /*!
+            計算された圧力を求める
+        */
+        double getPressure() const;
+        
         //! A public member function (constant).
         /*!
             計算された温度の絶対温度を求める
@@ -159,7 +164,7 @@ namespace moleculardynamics {
         */
         double norm2(double x, double y, double z) const
         {
-            return (x * x + y * y + z * z);
+            return x * x + y * y + z * z;
         }
 
         // #endregion privateメンバ関数
@@ -259,6 +264,12 @@ namespace moleculardynamics {
 
         //! A private member variable (constant).
         /*!
+            標準気圧
+        */
+        static double const ATM;
+
+        //! A private member variable (constant).
+        /*!
             アボガドロ定数
         */
         static double const AVOGADRO_CONSTANT;
@@ -345,7 +356,7 @@ namespace moleculardynamics {
         /*!
             相互作用を計算するセルの個数
         */
-        std::int32_t const ncp_ = 2;
+        std::int32_t const ncp_ = 3;
         
         //! A private member variable.
         /*!
@@ -417,13 +428,19 @@ namespace moleculardynamics {
         /*!
             ポテンシャルエネルギー
         */
-        tbb::atomic<double> Up_;
+        double Up_;
 
         //! A private member variable (constant).
         /*!
             全エネルギー
         */
         double Utot_;
+
+        //! A private member variable (constant).
+        /*!
+            ビリアル
+        */
+        double virial_;
 
         //! A private member variable (constant).
         /*!

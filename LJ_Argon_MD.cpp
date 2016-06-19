@@ -751,7 +751,8 @@ void RenderText(ID3D10Device* pd3dDevice)
     txthelper->DrawTextLine((boost::wformat(L"運動エネルギー: %.3f (Hartree)") % armd.Uk).str().c_str());
     txthelper->DrawTextLine((boost::wformat(L"ポテンシャルエネルギー: %.3f (Hartree)") % armd.Up).str().c_str());
     txthelper->DrawTextLine((boost::wformat(L"全エネルギー: %.3f (Hartree)") % armd.Utot).str().c_str());
-    txthelper->DrawTextLine(L"原子の色の違いは働いている力の違いを表す");
+    txthelper->DrawTextLine((boost::wformat(L"圧力: %.3f (atm)") % armd.getPressure()).str().c_str());
+        txthelper->DrawTextLine(L"原子の色の違いは働いている力の違いを表す");
     txthelper->DrawTextLine(L"赤色に近いほどその原子に働いている力が強い");
     txthelper->End();
     pd3dDevice->IASetInputLayout(pInputLayout.get());

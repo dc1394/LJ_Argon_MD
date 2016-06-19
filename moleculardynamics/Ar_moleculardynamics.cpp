@@ -8,8 +8,10 @@
 #include "DXUT.h"
 #include "Ar_moleculardynamics.h"
 #include "../myrandom/myrand.h"
-#include <tbb/parallel_for.h>           // for tbb::parallel_for
-#include <tbb/partitioner.h>            // for tbb::auto_partitioner
+#include <cmath>                    // for std::sqrt, std::pow
+#include <tbb/combinable.h>         // for tbb::combinable
+#include <tbb/parallel_for.h>       // for tbb::parallel_for
+#include <tbb/partitioner.h>        // for tbb::auto_partitioner
 
 namespace moleculardynamics {
     // #region static private 定数
@@ -19,6 +21,8 @@ namespace moleculardynamics {
     double const Ar_moleculardynamics::FIRSTTEMP = 50.0;
 
     double const Ar_moleculardynamics::ALPHA = 0.2;
+
+    double const Ar_moleculardynamics::ATM = 9.86923266716013E-6;
 
     double const Ar_moleculardynamics::AVOGADRO_CONSTANT = 6.022140857E+23;
 
@@ -92,13 +96,16 @@ namespace moleculardynamics {
         }
         
         // ポテンシャルエネルギーの初期化
-        Up_.store(0.0);
+        Up_ = 0.0;
+
+        tbb::combinable<double> Up;
+        tbb::combinable<double> virial;
 
         tbb::parallel_for(
             0,
             NumAtom_,
             1,
-            [this](std::int32_t n) {
+            [this, &Up, &virial](std::int32_t n) {
             for (auto m = 0; m < NumAtom_; m++) {
 
                 // ±ncp_分のセル内の原子との相互作用を計算
@@ -118,7 +125,7 @@ namespace moleculardynamics {
                                 auto const r2 = norm2(dx, dy, dz);
                                 // 打ち切り距離内であれば計算
                                 if (r2 <= rc2_) {
-                                    auto const r = sqrt(r2);
+                                    auto const r = std::sqrt(r2);
                                     auto const rm6 = 1.0 / (r2 * r2 * r2);
                                     auto const rm7 = rm6 / r;
                                     auto const rm12 = rm6 * rm6;
@@ -131,7 +138,8 @@ namespace moleculardynamics {
                                     FZ_[n] += dz / r * Fr;
 
                                     // エネルギーの計算、ただし二重計算のために0.5をかけておく
-                                    Up_.store(Up_ + 0.5 * (4.0 * (rm12 - rm6) - Vrc_));
+                                    Up.local() += 0.5 * (4.0 * (rm12 - rm6) - Vrc_);
+                                    virial.local() += 0.5 * r * Fr;
                                 }
                             }
                         }
@@ -140,6 +148,9 @@ namespace moleculardynamics {
             }
         },
         tbb::auto_partitioner());
+
+        Up_ = Up.combine(std::plus<double>());
+        virial_ = virial.combine(std::plus<double>());
     }
     
     double Ar_moleculardynamics::getDeltat() const
@@ -156,10 +167,18 @@ namespace moleculardynamics {
     {
         return Ar_moleculardynamics::SIGMA * lat_ * 1.0E+9;
     }
-
+    
     double Ar_moleculardynamics::getPeriodiclen() const
     {
         return Ar_moleculardynamics::SIGMA * periodiclen_ * 1.0E+9;
+    }
+
+    double Ar_moleculardynamics::getPressure() const
+    {
+        auto const V = std::pow(Ar_moleculardynamics::SIGMA * periodiclen_, 3);
+        auto const ideal = NumAtom * Ar_moleculardynamics::YPSILON * Tc_;
+
+        return (ideal - virial_ * Ar_moleculardynamics::YPSILON / 3.0) / V * Ar_moleculardynamics::ATM;
     }
 
     double Ar_moleculardynamics::getTcalc() const
