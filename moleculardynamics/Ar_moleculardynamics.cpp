@@ -211,7 +211,7 @@ namespace moleculardynamics {
         Tc_ = Uk_ / (1.5 * static_cast<double>(NumAtom_));
 
         auto const s = std::sqrt((Tg_ + Ar_moleculardynamics::ALPHA * (Tc_ - Tg_)) / Tc_);
-        
+
         switch (MD_iter_) {
         case 1:
             // update the coordinates by the second order Euler method
@@ -426,10 +426,10 @@ namespace moleculardynamics {
         myrandom::MyRand mr(-1.0, 1.0);
 
         for (auto n = 0; n < NumAtom_; n++) {
-            double rndX = mr.myrand();
-            double rndY = mr.myrand();
-            double rndZ = mr.myrand();
-            double tmp = 1.0 / std::sqrt(norm2(rndX, rndY, rndZ));
+            auto rndX = mr.myrand();
+            auto rndY = mr.myrand();
+            auto rndZ = mr.myrand();
+            auto const tmp = 1.0 / std::sqrt(norm2(rndX, rndY, rndZ));
             rndX *= tmp;
             rndY *= tmp;
             rndZ *= tmp;
