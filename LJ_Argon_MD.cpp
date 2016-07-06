@@ -334,7 +334,7 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
         auto const stride = sizeof(SimpleVertex);
         auto const offset = 0U;
         auto const pVertexBuffertmp2 = pVertexBuffer.get();
-        pd3dDevice->IASetVertexBuffers(0, 1, &pVertexBuffertmp2, &stride, &offset);
+        pd3dDevice->IASetVertexBuffers(0, 1, &pVertexBuffertmp2, reinterpret_cast<UINT const *>(&stride), &offset);
 
         // Set index buffer
         pd3dDevice->IASetIndexBuffer(pIndexBuffer.get(), DXGI_FORMAT_R32_UINT, 0);
