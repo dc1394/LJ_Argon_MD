@@ -11,7 +11,6 @@
 #include <cmath>                    // for std::sqrt, std::pow
 #include <tbb/combinable.h>         // for tbb::combinable
 #include <tbb/parallel_for.h>       // for tbb::parallel_for
-#include <tbb/partitioner.h>        // for tbb::auto_partitioner
 
 namespace moleculardynamics {
     // #region static private 定数
@@ -102,52 +101,51 @@ namespace moleculardynamics {
         tbb::combinable<double> virial;
 
         tbb::parallel_for(
-            0,
-            NumAtom_,
-            1,
-            [this, &Up, &virial](std::int32_t n) {
-            for (auto m = 0; m < NumAtom_; m++) {
+            tbb::blocked_range<std::int32_t>(0, NumAtom_),
+            [this, &Up, &virial](tbb::blocked_range<std::int32_t> const & range) {
+            for (auto && n = range.begin(); n != range.end(); ++n) {
+                for (auto m = 0; m < NumAtom_; m++) {
 
-                // ±ncp_分のセル内の原子との相互作用を計算
-                for (auto i = -ncp_; i <= ncp_; i++) {
-                    for (auto j = -ncp_; j <= ncp_; j++) {
-                        for (auto k = -ncp_; k <= ncp_; k++) {
-                            auto const sx = static_cast<double>(i) * periodiclen_;
-                            auto const sy = static_cast<double>(j) * periodiclen_;
-                            auto const sz = static_cast<double>(k) * periodiclen_;
+                    // ±ncp_分のセル内の原子との相互作用を計算
+                    for (auto i = -ncp_; i <= ncp_; i++) {
+                        for (auto j = -ncp_; j <= ncp_; j++) {
+                            for (auto k = -ncp_; k <= ncp_; k++) {
+                                auto const sx = static_cast<double>(i) * periodiclen_;
+                                auto const sy = static_cast<double>(j) * periodiclen_;
+                                auto const sz = static_cast<double>(k) * periodiclen_;
 
-                            // 自分自身との相互作用を排除
-                            if (n != m || i != 0 || j != 0 || k != 0) {
-                                auto const dx = X_[n] - (X_[m] + sx);
-                                auto const dy = Y_[n] - (Y_[m] + sy);
-                                auto const dz = Z_[n] - (Z_[m] + sz);
+                                // 自分自身との相互作用を排除
+                                if (n != m || i != 0 || j != 0 || k != 0) {
+                                    auto const dx = X_[n] - (X_[m] + sx);
+                                    auto const dy = Y_[n] - (Y_[m] + sy);
+                                    auto const dz = Z_[n] - (Z_[m] + sz);
 
-                                auto const r2 = norm2(dx, dy, dz);
-                                // 打ち切り距離内であれば計算
-                                if (r2 <= rc2_) {
-                                    auto const r = std::sqrt(r2);
-                                    auto const rm6 = 1.0 / (r2 * r2 * r2);
-                                    auto const rm7 = rm6 / r;
-                                    auto const rm12 = rm6 * rm6;
-                                    auto const rm13 = rm12 / r;
+                                    auto const r2 = norm2(dx, dy, dz);
+                                    // 打ち切り距離内であれば計算
+                                    if (r2 <= rc2_) {
+                                        auto const r = std::sqrt(r2);
+                                        auto const rm6 = 1.0 / (r2 * r2 * r2);
+                                        auto const rm7 = rm6 / r;
+                                        auto const rm12 = rm6 * rm6;
+                                        auto const rm13 = rm12 / r;
 
-                                    auto const Fr = 48.0 * rm13 - 24.0 * rm7;
+                                        auto const Fr = 48.0 * rm13 - 24.0 * rm7;
 
-                                    FX_[n] += dx / r * Fr;
-                                    FY_[n] += dy / r * Fr;
-                                    FZ_[n] += dz / r * Fr;
+                                        FX_[n] += dx / r * Fr;
+                                        FY_[n] += dy / r * Fr;
+                                        FZ_[n] += dz / r * Fr;
 
-                                    // エネルギーの計算、ただし二重計算のために0.5をかけておく
-                                    Up.local() += 0.5 * (4.0 * (rm12 - rm6) - Vrc_);
-                                    virial.local() += 0.5 * r * Fr;
+                                        // エネルギーの計算、ただし二重計算のために0.5をかけておく
+                                        Up.local() += 0.5 * (4.0 * (rm12 - rm6) - Vrc_);
+                                        virial.local() += 0.5 * r * Fr;
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        },
-        tbb::auto_partitioner());
+        });
 
         Up_ = Up.combine(std::plus<double>());
         virial_ = virial.combine(std::plus<double>());
@@ -217,92 +215,89 @@ namespace moleculardynamics {
             // update the coordinates by the second order Euler method
             // 最初のステップだけ修正Euler法で時間発展
             tbb::parallel_for(
-                0,
-                NumAtom_,
-                1,
-                [this, s](std::int32_t n) {
-                X1_[n] = X_[n];
-                Y1_[n] = Y_[n];
-                Z1_[n] = Z_[n];
+                tbb::blocked_range<std::int32_t>(0, NumAtom_),
+                [this, s](tbb::blocked_range<std::int32_t> const & range) {
+                for (auto && n = range.begin(); n != range.end(); ++n) {
+                    X1_[n] = X_[n];
+                    Y1_[n] = Y_[n];
+                    Z1_[n] = Z_[n];
 
-                // scaling of velocity
-                VX_[n] *= s;
-                VY_[n] *= s;
-                VZ_[n] *= s;
+                    // scaling of velocity
+                    VX_[n] *= s;
+                    VY_[n] *= s;
+                    VZ_[n] *= s;
 
-                // update coordinates and velocity
-                X_[n] += Ar_moleculardynamics::DT * VX_[n] + 0.5 * FX_[n] * dt2;
-                Y_[n] += Ar_moleculardynamics::DT * VY_[n] + 0.5 * FY_[n] * dt2;
-                Z_[n] += Ar_moleculardynamics::DT * VZ_[n] + 0.5 * FZ_[n] * dt2;
+                    // update coordinates and velocity
+                    X_[n] += Ar_moleculardynamics::DT * VX_[n] + 0.5 * FX_[n] * dt2;
+                    Y_[n] += Ar_moleculardynamics::DT * VY_[n] + 0.5 * FY_[n] * dt2;
+                    Z_[n] += Ar_moleculardynamics::DT * VZ_[n] + 0.5 * FZ_[n] * dt2;
 
-                VX_[n] += Ar_moleculardynamics::DT * FX_[n];
-                VY_[n] += Ar_moleculardynamics::DT * FY_[n];
-                VZ_[n] += Ar_moleculardynamics::DT * FZ_[n];
-            },
-                tbb::auto_partitioner());
+                    VX_[n] += Ar_moleculardynamics::DT * FX_[n];
+                    VY_[n] += Ar_moleculardynamics::DT * FY_[n];
+                    VZ_[n] += Ar_moleculardynamics::DT * FZ_[n];
+                }
+            });
             break;
 
         default:
+
             // update the coordinates by the Verlet method
-
             tbb::parallel_for(
-                0,
-                NumAtom_,
-                1,
-                [this, s](std::int32_t n) {
-                std::array<double, 3> rtmp = { X_[n], Y_[n], Z_[n] };
+                tbb::blocked_range<std::int32_t>(0, NumAtom_),
+                [this, s](tbb::blocked_range<std::int32_t> const & range) {
+                    for (auto && n = range.begin(); n != range.end(); ++n) {
+                        std::array<double, 3> rtmp = { X_[n], Y_[n], Z_[n] };
 
-                // update coordinates and velocity
-                // Verlet法の座標更新式において速度成分を抜き出し、その部分をスケールする
-                X_[n] += s * (X_[n] - X1_[n]) + FX_[n] * dt2;
-                Y_[n] += s * (Y_[n] - Y1_[n]) + FY_[n] * dt2;
-                Z_[n] += s * (Z_[n] - Z1_[n]) + FZ_[n] * dt2;
+                        // update coordinates and velocity
+                        // Verlet法の座標更新式において速度成分を抜き出し、その部分をスケールする
+                        X_[n] += s * (X_[n] - X1_[n]) + FX_[n] * dt2;
+                        Y_[n] += s * (Y_[n] - Y1_[n]) + FY_[n] * dt2;
+                        Z_[n] += s * (Z_[n] - Z1_[n]) + FZ_[n] * dt2;
 
-                VX_[n] = 0.5 * (X_[n] - X1_[n]) / Ar_moleculardynamics::DT;
-                VY_[n] = 0.5 * (Y_[n] - Y1_[n]) / Ar_moleculardynamics::DT;
-                VZ_[n] = 0.5 * (Z_[n] - Z1_[n]) / Ar_moleculardynamics::DT;
+                        VX_[n] = 0.5 * (X_[n] - X1_[n]) / Ar_moleculardynamics::DT;
+                        VY_[n] = 0.5 * (Y_[n] - Y1_[n]) / Ar_moleculardynamics::DT;
+                        VZ_[n] = 0.5 * (Z_[n] - Z1_[n]) / Ar_moleculardynamics::DT;
 
-                X1_[n] = rtmp[0];
-                Y1_[n] = rtmp[1];
-                Z1_[n] = rtmp[2];
-            },
-                tbb::auto_partitioner());
+                        X1_[n] = rtmp[0];
+                        Y1_[n] = rtmp[1];
+                        Z1_[n] = rtmp[2];
+                    }
+            });
             break;
         }
 
         // consider the periodic boundary condination
         // セルの外側に出たら座標をセル内に戻す
         tbb::parallel_for(
-            0,
-            NumAtom_,
-            1,
-            [this](std::int32_t n) {
-            if (X_[n] > periodiclen_) {
-                X_[n] -= periodiclen_;
-                X1_[n] -= periodiclen_;
+            tbb::blocked_range<std::int32_t>(0, NumAtom_),
+            [this, s](tbb::blocked_range<std::int32_t> const & range) {
+            for (auto && n = range.begin(); n != range.end(); ++n) {
+                if (X_[n] > periodiclen_) {
+                    X_[n] -= periodiclen_;
+                    X1_[n] -= periodiclen_;
+                }
+                else if (X_[n] < 0.0) {
+                    X_[n] += periodiclen_;
+                    X1_[n] += periodiclen_;
+                }
+                if (Y_[n] > periodiclen_) {
+                    Y_[n] -= periodiclen_;
+                    Y1_[n] -= periodiclen_;
+                }
+                else if (Y_[n] < 0.0) {
+                    Y_[n] += periodiclen_;
+                    Y1_[n] += periodiclen_;
+                }
+                if (Z_[n] > periodiclen_) {
+                    Z_[n] -= periodiclen_;
+                    Z1_[n] -= periodiclen_;
+                }
+                else if (Z_[n] < 0.0) {
+                    Z_[n] += periodiclen_;
+                    Z1_[n] += periodiclen_;
+                }
             }
-            else if (X_[n] < 0.0) {
-                X_[n] += periodiclen_;
-                X1_[n] += periodiclen_;
-            }
-            if (Y_[n] > periodiclen_) {
-                Y_[n] -= periodiclen_;
-                Y1_[n] -= periodiclen_;
-            }
-            else if (Y_[n] < 0.0) {
-                Y_[n] += periodiclen_;
-                Y1_[n] += periodiclen_;
-            }
-            if (Z_[n] > periodiclen_) {
-                Z_[n] -= periodiclen_;
-                Z1_[n] -= periodiclen_;
-            }
-            else if (Z_[n] < 0.0) {
-                Z_[n] += periodiclen_;
-                Z1_[n] += periodiclen_;
-            }
-        },
-            tbb::auto_partitioner());
+        });
 
         // 繰り返し回数と時間を増加
         t_ = static_cast<double>(MD_iter_) * Ar_moleculardynamics::DT;
