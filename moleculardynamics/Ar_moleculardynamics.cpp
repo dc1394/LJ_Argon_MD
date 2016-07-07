@@ -9,6 +9,7 @@
 #include "Ar_moleculardynamics.h"
 #include "../myrandom/myrand.h"
 #include <cmath>                    // for std::sqrt, std::pow
+#include <boost/assert.hpp>         // for BOOST_ASSERT
 #include <tbb/combinable.h>         // for tbb::combinable
 #include <tbb/parallel_for.h>       // for tbb::parallel_for
 
@@ -248,11 +249,24 @@ namespace moleculardynamics {
                     for (auto && n = range.begin(); n != range.end(); ++n) {
                         std::array<double, 3> rtmp = { X_[n], Y_[n], Z_[n] };
 
-                        // update coordinates and velocity
-                        // Verlet法の座標更新式において速度成分を抜き出し、その部分をスケールする
-                        X_[n] += s * (X_[n] - X1_[n]) + FX_[n] * dt2;
-                        Y_[n] += s * (Y_[n] - Y1_[n]) + FY_[n] * dt2;
-                        Z_[n] += s * (Z_[n] - Z1_[n]) + FZ_[n] * dt2;
+                        switch (ensemble_) {
+                        case EnsembleType::NVE:
+                            X_[n] = 2.0 * X_[n] - X1_[n] + FX_[n] * dt2;
+                            Y_[n] = 2.0 * Y_[n] - Y1_[n] + FY_[n] * dt2;
+                            Z_[n] = 2.0 * Z_[n] - Z1_[n] + FZ_[n] * dt2;
+                            break;
+
+                        case EnsembleType::NVT:
+                            // update coordinates and velocity
+                            // Verlet法の座標更新式において速度成分を抜き出し、その部分をスケールする
+                            X_[n] += s * (X_[n] - X1_[n]) + FX_[n] * dt2;
+                            Y_[n] += s * (Y_[n] - Y1_[n]) + FY_[n] * dt2;
+                            Z_[n] += s * (Z_[n] - Z1_[n]) + FZ_[n] * dt2;
+                            break;
+
+                        default:
+                            BOOST_ASSERT(!"何かがおかしい！");
+                        }
 
                         VX_[n] = 0.5 * (X_[n] - X1_[n]) / Ar_moleculardynamics::DT;
                         VY_[n] = 0.5 * (Y_[n] - Y1_[n]) / Ar_moleculardynamics::DT;
@@ -311,6 +325,12 @@ namespace moleculardynamics {
 
         MD_initPos();
         MD_initVel();
+    }
+
+    void Ar_moleculardynamics::setEnsemble(EnsembleType ensemble)
+    {
+        ensemble_ = ensemble;
+        recalc();
     }
 
     void Ar_moleculardynamics::setNc(std::int32_t Nc)

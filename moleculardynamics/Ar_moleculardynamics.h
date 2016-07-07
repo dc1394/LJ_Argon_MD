@@ -18,6 +18,11 @@
 namespace moleculardynamics {
     using namespace utility;
 
+    enum class EnsembleType : std::int32_t {
+        NVE = 0,
+        NVT = 1
+    };
+
     //! A class.
     /*!
         アルゴンに対して、分子動力学シミュレーションを行うクラス
@@ -104,8 +109,15 @@ namespace moleculardynamics {
 
         //! A public member function.
         /*!
+            アンサンブルを設定する
+            \param ensemble 設定するアンサンブル
+        */
+        void setEnsemble(EnsembleType ensemble);
+
+        //! A public member function.
+        /*!
             スーパーセルの大きさを設定する
-            \param Nc_ スーパーセルの大きさ
+            \param Nc スーパーセルの大きさ
         */
         void setNc(std::int32_t Nc);
 
@@ -315,6 +327,12 @@ namespace moleculardynamics {
             時間刻みの二乗
         */
         double const dt2;
+
+        //! A private member variable.
+        /*!
+            アンサンブル
+        */
+        EnsembleType ensemble_ = EnsembleType::NVT;
 
         //! A private member variable.
         /*!

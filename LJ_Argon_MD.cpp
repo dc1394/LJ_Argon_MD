@@ -273,6 +273,8 @@ struct SimpleVertex
 #define IDC_SLIDER              7
 #define IDC_SLIDER2             8
 #define IDC_SLIDER3             9
+#define IDC_RADIOA              10
+#define IDC_RADIOB              11
 
 //--------------------------------------------------------------------------------------
 // Initialize the app 
@@ -568,6 +570,14 @@ void CALLBACK OnGUIEvent(UINT nEvent, int nControlID, CDXUTControl* pControl, vo
         modNc = true;
         break;
 
+    case IDC_RADIOA:
+        armd.setEnsemble(moleculardynamics::EnsembleType::NVT);
+        break;
+
+    case IDC_RADIOB:
+        armd.setEnsemble(moleculardynamics::EnsembleType::NVE);
+        break;
+
     default:
         break;
     }
@@ -811,6 +821,9 @@ void SetUI()
         7,
         moleculardynamics::Ar_moleculardynamics::FIRSTNC);
 
+    // アンサンブルの変更
+    g_HUD.AddRadioButton(IDC_RADIOA, 1, L"NVTアンサンブル", 35, iY += 34, 125, 22, true, L'1');
+    g_HUD.AddRadioButton(IDC_RADIOB, 1, L"NVEアンサンブル", 35, iY += 28, 125, 22, false, L'2');
 }
 
 //--------------------------------------------------------------------------------------
