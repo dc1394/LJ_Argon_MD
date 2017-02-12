@@ -752,8 +752,8 @@ void RenderText(ID3D10Device* pd3dDevice)
     txthelper->DrawTextLine((boost::wformat(L"スーパーセルの個数: %d") % armd.Nc).str().c_str());
     txthelper->DrawTextLine((boost::wformat(L"MDのステップ数: %d") % armd.MD_iter).str().c_str());
     txthelper->DrawTextLine((boost::wformat(L"経過時間: %.3f (ps)") % armd.getDeltat()).str().c_str());
-    txthelper->DrawTextLine((boost::wformat(L"格子定数: %.3f (pm)") % armd.getLatticeconst()).str().c_str());
-    txthelper->DrawTextLine((boost::wformat(L"箱の一辺の長さ: %.3f (pm)")  % armd.getPeriodiclen()).str().c_str());
+    txthelper->DrawTextLine((boost::wformat(L"格子定数: %.3f (nm)") % armd.getLatticeconst()).str().c_str());
+    txthelper->DrawTextLine((boost::wformat(L"箱の一辺の長さ: %.3f (nm)")  % armd.getPeriodiclen()).str().c_str());
     txthelper->DrawTextLine((boost::wformat(L"設定された温度: %.3f (K)") % armd.getTgiven()).str().c_str());
     txthelper->DrawTextLine((boost::wformat(L"計算された温度: %.3f (K)") % armd.getTcalc()).str().c_str());
     txthelper->DrawTextLine((boost::wformat(L"運動エネルギー: %.3f (Hartree)") % armd.Uk).str().c_str());
