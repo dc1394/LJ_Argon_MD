@@ -668,6 +668,8 @@ bool CALLBACK OnDeviceRemoved( void* pUserContext )
 
 void CreateSphereMesh(ID3D10Device* pd3dDevice)
 {
+    using namespace moleculardynamics;
+
     auto const size = armd.X().size();
     BOOST_ASSERT(size == armd.Y().size());
     BOOST_ASSERT(size == armd.Z().size());
@@ -675,7 +677,12 @@ void CreateSphereMesh(ID3D10Device* pd3dDevice)
     pmeshvec.resize(size);
     for (auto & pmesh : pmeshvec) {
         ID3DX10Mesh * pmeshtmp = nullptr;
-        DXUTCreateSphere(pd3dDevice, 0.2f, 16, 16, &pmeshtmp);
+        DXUTCreateSphere(
+            pd3dDevice,
+            static_cast<float>(Ar_moleculardynamics::VDW_RADIUS / Ar_moleculardynamics::SIGMA),
+            16,
+            16,
+            &pmeshtmp);
         pmesh.reset(pmeshtmp);
     }
 }

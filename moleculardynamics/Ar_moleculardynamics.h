@@ -266,6 +266,18 @@ namespace moleculardynamics {
             初期温度（絶対温度）
         */
         static double const FIRSTTEMP;
+        
+        //! A private member variable (constant).
+        /*!
+            アルゴン原子に対するσ
+        */
+        static double const SIGMA;
+
+        //! A private member variable (constant).
+        /*!
+            アルゴン原子のVan der Waals半径
+        */
+        static double const VDW_RADIUS;
 
     private:
         //! A private member variable (constant).
@@ -303,12 +315,6 @@ namespace moleculardynamics {
             ボルツマン定数
         */
         static double const KB;
-        
-        //! A private member variable (constant).
-        /*!
-            アルゴン原子に対するσ
-        */
-        static double const SIGMA;
 
         //! A private member variable (constant).
         /*!

@@ -20,6 +20,10 @@ namespace moleculardynamics {
 
     double const Ar_moleculardynamics::FIRSTTEMP = 50.0;
 
+    double const Ar_moleculardynamics::SIGMA = 3.405E-10;
+
+    double const Ar_moleculardynamics::VDW_RADIUS = 1.88E-10;
+
     double const Ar_moleculardynamics::ALPHA = 0.2;
 
     double const Ar_moleculardynamics::ATM = 9.86923266716013E-6;
@@ -31,8 +35,6 @@ namespace moleculardynamics {
     double const Ar_moleculardynamics::HARTREE = 4.35974465054E-18;
 
     double const Ar_moleculardynamics::KB = 1.3806488E-23;
-
-    double const Ar_moleculardynamics::SIGMA = 3.405E-10;
 
     double const Ar_moleculardynamics::TAU =
         std::sqrt(0.039948 / Ar_moleculardynamics::AVOGADRO_CONSTANT * Ar_moleculardynamics::SIGMA * Ar_moleculardynamics::SIGMA / Ar_moleculardynamics::YPSILON);
