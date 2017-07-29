@@ -11,9 +11,11 @@
 #pragma once
 
 #include "../utility/property.h"
-#include <array>                    // for std::array
-#include <cstdint>                  // for std::int32_t
-#include <vector>                   // for std::vector
+#include <cstdint>                              // for std::int32_t
+#include <utility>                              // for std::pair
+#include <vector>                               // for std::vector
+#include <boost/align/aligned_allocator.hpp>    // for boost::alignment::aligned_allocator
+#include <Eigen/Core>                           // for Eigen::Vector4d
 
 namespace moleculardynamics {
     using namespace utility;
@@ -21,6 +23,15 @@ namespace moleculardynamics {
     enum class EnsembleType : std::int32_t {
         NVE = 0,
         NVT = 1
+    };
+
+    #pragma pack(16)
+    struct Atom {
+        Eigen::Vector4d f;
+        Eigen::Vector4d r;
+        Eigen::Vector4d r1;
+        Eigen::Vector4d v;
+        Eigen::Vector4d p;
     };
 
     //! A class.
@@ -51,7 +62,7 @@ namespace moleculardynamics {
         /*!
             原子に働く力を計算する
         */
-        void Calc_Forces();
+        void calculate_force_pair();
         
         //! A public member function (constant).
         /*!
@@ -97,6 +108,12 @@ namespace moleculardynamics {
 
         //! A public member function.
         /*!
+            原子のペアを作る
+        */
+        void make_pair();
+
+        //! A public member function.
+        /*!
             原子を移動させる
         */
         void Move_Atoms();
@@ -106,6 +123,8 @@ namespace moleculardynamics {
             再計算する
         */
         void recalc();
+
+        void update_position();
 
         //! A public member function.
         /*!
@@ -146,6 +165,14 @@ namespace moleculardynamics {
             \param e 無次元単位で表されたエネルギー
             \return Hartree単位で表されたエネルギー
         */
+        double adjust_periodic(Eigen::Vector4d const & dv);
+
+        //! A private member function.
+        /*!
+            エネルギーの単位を無次元単位からHartreeに変換する
+            \param e 無次元単位で表されたエネルギー
+            \return Hartree単位で表されたエネルギー
+        */
         double DimensionlessToHartree(double e) const;
         
         //! A private member function.
@@ -166,24 +193,17 @@ namespace moleculardynamics {
         */
         void ModLattice();
 
-        //! A private member function (constant).
-        /*!
-            ノルムの二乗を求める
-            \param x x座標
-            \param y y座標
-            \param z z座標
-            \return ノルムの二乗
-        */
-        double norm2(double x, double y, double z) const
-        {
-            return x * x + y * y + z * z;
-        }
-
         // #endregion privateメンバ関数
 
         // #region プロパティ
 
     public:
+        //! A property.
+        /*!
+            原子へのプロパティ
+        */
+        Property<std::vector<Atom, boost::alignment::aligned_allocator<Atom> > const &> const atoms;
+
         //! A property.
         /*!
             MDのステップ数へのプロパティ
@@ -225,24 +245,6 @@ namespace moleculardynamics {
             全エネルギーへのプロパティ
         */
         Property<double> const Utot;
-
-        //! A property.
-        /*!
-            n番目の原子のx座標へのプロパティ
-        */
-        Property<std::vector<double> const &> const X;
-
-        //! A property.
-        /*!
-            n番目の原子のy座標へのプロパティ
-        */
-        Property<std::vector<double> const &> const Y;
-
-        //! A property.
-        /*!
-            n番目の原子のz座標へのプロパティ
-        */
-        Property<std::vector<double> const &> const Z;
 
         // #endregion プロパティ
 
@@ -330,6 +332,24 @@ namespace moleculardynamics {
 
         //! A private member variable (constant).
         /*!
+            スーパーセルの個数
+        */
+        std::int32_t Nc_ = Ar_moleculardynamics::FIRSTNC;
+        
+        //! A private member variable.
+        /*!
+            原子の可変長配列
+        */
+        std::vector<Atom, boost::alignment::aligned_allocator<Atom> > atoms_;
+
+        //! A private member variable.
+        /*!
+            原子の可変長配列
+        */
+        std::vector< std::pair<std::int32_t, std::int32_t> > atom_pairs_;
+
+        //! A private member variable (constant).
+        /*!
             時間刻みの二乗
         */
         double const dt2;
@@ -345,30 +365,6 @@ namespace moleculardynamics {
             格子定数
         */
         double lat_;
-
-        //! A private member variable (constant).
-        /*!
-            スーパーセルの個数
-        */
-        std::int32_t Nc_ = Ar_moleculardynamics::FIRSTNC;
-
-        //! A private member variable.
-        /*!
-            n個目の原子に働く力のx成分
-        */
-        std::vector<double> FX_;
-
-        //! A private member variable.
-        /*!
-            n個目の原子に働く力のy成分
-        */
-        std::vector<double> FY_;
-
-        //! A private member variable.
-        /*!
-            n個目の原子に働く力のz成分
-        */
-        std::vector<double> FZ_;
 
         //! A private member variable.
         /*!
@@ -471,60 +467,6 @@ namespace moleculardynamics {
             ポテンシャルエネルギーの打ち切り
         */
         double const Vrc_;
-        
-        //! A private member variable.
-        /*!
-            n個目の原子の速度のx成分
-        */
-        std::vector<double> VX_;
-
-        //! A private member variable.
-        /*!
-            n個目の原子の速度のy成分
-        */
-        std::vector<double> VY_;
-
-        //! A private member variable.
-        /*!
-            n個目の原子の速度のz成分
-        */
-        std::vector<double> VZ_;
-                
-        //! A private member variable.
-        /*!
-            n個目の原子のx座標
-        */
-        std::vector<double> X_;
-
-        //! A private member variable.
-        /*!
-            n個目の原子の初期x座標
-        */
-        std::vector<double> X1_;
-        
-        //! A private member variable.
-        /*!
-            n個目の原子のy座標
-        */
-        std::vector<double> Y_;
-
-        //! A private member variable.
-        /*!
-            n個目の原子の初期y座標
-        */
-        std::vector<double> Y1_;
-        
-        //! A private member variable.
-        /*!
-            n個目の原子のz座標
-        */
-        std::vector<double> Z_;
-        
-        //! A private member variable.
-        /*!
-            n個目の原子の初期z座標
-        */
-        std::vector<double> Z1_;
 
         // #endregion メンバ変数
 
