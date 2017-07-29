@@ -75,39 +75,79 @@ namespace moleculardynamics {
 
     // #region publicメンバ関数
 
+    void Ar_moleculardynamics::calculate()
+    {
+        update_position();
+        make_pair();
+        calculate_force_pair();
+        update_position();
+        
+        // 運動エネルギーの初期化
+        Uk_ = 0.0;
+
+        // calculate temperture
+        for (auto n = 0; n < NumAtom_; n++) {
+            Uk_ += atoms_[n].v.squaredNorm();
+        }
+
+        // 運動エネルギーの計算
+        Uk_ *= 0.5;
+
+        // 全エネルギー（運動エネルギー+ポテンシャルエネルギー）の計算
+        Utot_ = Uk_ + Up_;
+
+        // 温度の計算
+        Tc_ = Uk_ / (1.5 * static_cast<double>(NumAtom_));
+
+        update_position();
+        periodic();
+        
+        // 繰り返し回数と時間を増加
+        t_ = static_cast<double>(MD_iter_)* Ar_moleculardynamics::DT;
+        MD_iter_++;
+
+    }
+
     void Ar_moleculardynamics::calculate_force_pair()
     {
-        // 各原子に働く力の初期化
-        for (auto n = 0; n < NumAtom_; n++) {
-            atoms_[n].f = Eigen::Vector4d::Zero();
-        }
-        
         // ポテンシャルエネルギーの初期化
         Up_ = 0.0;
+        virial_ = 0.0;
 
-        tbb::combinable<double> Up;
-        tbb::combinable<double> virial;
+        //tbb::combinable<double> Up;
+        //tbb::combinable<double> virial;
+
+        for (auto && a : atoms_) {
+            a.f = Eigen::Vector4d::Zero();
+        }
 
         auto const pp = atom_pairs_.size();
         for (auto k = 0; k < pp; k++) {
-            const int i = atom_pairs_[k].first;
-            const int j = atom_pairs_[k].second;
-            auto const dv = atoms_[j].r - atoms_[i].r;
-            auto const r2 = adjust_periodic(dv);
+            auto const i = atom_pairs_[k].first;
+            auto const j = atom_pairs_[k].second;
+            auto const dv = adjust_periodic(atoms_[j].r - atoms_[i].r);
+            auto const r2 = dv.squaredNorm();
 
             if (r2 > rc2_) {
                 continue;
             }
 
             auto const r = std::sqrt(r2);
-            auto const rm6 = 1.0 / (r2 * r2 * r2);
+            auto const r6 = r2 * r2 * r2;
+            auto const rm6 = 1.0 / r6;
             auto const rm7 = rm6 / r;
             auto const rm12 = rm6 * rm6;
             auto const rm13 = rm12 / r;
 
             auto const Fr = 48.0 * rm13 - 24.0 * rm7;
+            auto const df = (24.0 * r6 - 48.0) * rm12 / r2 * Ar_moleculardynamics::DT;
+            Up_ += 0.5 * (4.0 * (rm12 - rm6) - Vrc_);
+            virial_ += 0.5 * r * Fr;
 
-            atoms_[k].f += Eigen::Vector4d(dv[0] / r * Fr, dv[1] / r * Fr, dv[2] / r * Fr, 0.0);
+            atoms_[i].p += df * dv;
+            atoms_[j].p -= df * dv;
+            atoms_[i].f += dv / r * Fr;
+            atoms_[j].f -= dv / r * Fr;
         }
 
         //tbb::parallel_for(
@@ -156,8 +196,8 @@ namespace moleculardynamics {
         //    }
         //});
 
-        Up_ = Up.combine(std::plus<double>());
-        virial_ = virial.combine(std::plus<double>());
+        //Up_ = Up.combine(std::plus<double>());
+        //virial_ = virial.combine(std::plus<double>());
     }
     
     double Ar_moleculardynamics::getDeltat() const
@@ -200,10 +240,11 @@ namespace moleculardynamics {
     
     void Ar_moleculardynamics::make_pair()
     {
+        atom_pairs_.clear();
         for (auto i = 0; i < NumAtom_ - 1; i++) {
             for (auto j = i + 1; j < NumAtom_; j++) {
-                auto const dv = atoms_[j].r - atoms_[i].r;
-                auto const r2 = adjust_periodic(dv);
+                auto const dv = adjust_periodic(atoms_[j].r - atoms_[i].r);
+                auto const r2 = dv.squaredNorm();
 
                 if (r2 > rc2_) {
                     continue;
@@ -215,114 +256,62 @@ namespace moleculardynamics {
 
     void Ar_moleculardynamics::Move_Atoms()
     {
-        // 運動エネルギーの初期化
-        Uk_ = 0.0;
 
-        // calculate temperture
-        for (auto n = 0; n < NumAtom_; n++) {
-            Uk_ += atoms_[n].v.squaredNorm();
-        }
 
-        // 運動エネルギーの計算
-        Uk_ *= 0.5;
+        //auto const s = std::sqrt((Tg_ + Ar_moleculardynamics::ALPHA * (Tc_ - Tg_)) / Tc_);
 
-        // 全エネルギー（運動エネルギー+ポテンシャルエネルギー）の計算
-        Utot_ = Uk_ + Up_;
+        //switch (MD_iter_) {
+        //case 1:
+        //    // update the coordinates by the second order Euler method
+        //    // 最初のステップだけ修正Euler法で時間発展
+        //    tbb::parallel_for(
+        //        tbb::blocked_range<std::int32_t>(0, NumAtom_),
+        //        [this, s](tbb::blocked_range<std::int32_t> const & range) {
+        //        for (auto && n = range.begin(); n != range.end(); ++n) {
+        //            atoms_[n].r1 = atoms_[n].r;
+        //            
+        //            // scaling of velocity
+        //            atoms_[n].v *= s;
 
-        // 温度の計算
-        Tc_ = Uk_ / (1.5 * static_cast<double>(NumAtom_));
+        //            // update coordinates and velocity
+        //            atoms_[n].r += Ar_moleculardynamics::DT * atoms_[n].v + 0.5 * atoms_[n].f * dt2;
 
-        auto const s = std::sqrt((Tg_ + Ar_moleculardynamics::ALPHA * (Tc_ - Tg_)) / Tc_);
+        //            atoms_[n].v += Ar_moleculardynamics::DT * atoms_[n].f;
+        //        }
+        //    });
+        //    break;
 
-        switch (MD_iter_) {
-        case 1:
-            // update the coordinates by the second order Euler method
-            // 最初のステップだけ修正Euler法で時間発展
-            tbb::parallel_for(
-                tbb::blocked_range<std::int32_t>(0, NumAtom_),
-                [this, s](tbb::blocked_range<std::int32_t> const & range) {
-                for (auto && n = range.begin(); n != range.end(); ++n) {
-                    atoms_[n].r1 = atoms_[n].r;
-                    
-                    // scaling of velocity
-                    atoms_[n].v *= s;
+        //default:
 
-                    // update coordinates and velocity
-                    atoms_[n].r += Ar_moleculardynamics::DT * atoms_[n].v + 0.5 * atoms_[n].f * dt2;
+        //    // update the coordinates by the Verlet method
+        //    tbb::parallel_for(
+        //        tbb::blocked_range<std::int32_t>(0, NumAtom_),
+        //        [this, s](tbb::blocked_range<std::int32_t> const & range) {
+        //            for (auto && n = range.begin(); n != range.end(); ++n) {
+        //                auto const rtmp = atoms_[n].r;
 
-                    atoms_[n].v += Ar_moleculardynamics::DT * atoms_[n].f;
-                }
-            });
-            break;
+        //                switch (ensemble_) {
+        //                case EnsembleType::NVE:
+        //                    atoms_[n].r = 2.0 * atoms_[n].r - atoms_[n].r1 + atoms_[n].f * dt2;
+        //                    break;
 
-        default:
+        //                case EnsembleType::NVT:
+        //                    // update coordinates and velocity
+        //                    // Verlet法の座標更新式において速度成分を抜き出し、その部分をスケールする
+        //                    atoms_[n].r += s * (atoms_[n].r - atoms_[n].r1) + atoms_[n].f * dt2;
+        //                    break;
 
-            // update the coordinates by the Verlet method
-            tbb::parallel_for(
-                tbb::blocked_range<std::int32_t>(0, NumAtom_),
-                [this, s](tbb::blocked_range<std::int32_t> const & range) {
-                    for (auto && n = range.begin(); n != range.end(); ++n) {
-                        auto const rtmp = atoms_[n].r;
+        //                default:
+        //                    BOOST_ASSERT(!"何かがおかしい！");
+        //                }
 
-                        switch (ensemble_) {
-                        case EnsembleType::NVE:
-                            atoms_[n].r = 2.0 * atoms_[n].r - atoms_[n].r1 + atoms_[n].f * dt2;
-                            break;
+        //                atoms_[n].v = 0.5 * (atoms_[n].r - atoms_[n].r1) / Ar_moleculardynamics::DT;
 
-                        case EnsembleType::NVT:
-                            // update coordinates and velocity
-                            // Verlet法の座標更新式において速度成分を抜き出し、その部分をスケールする
-                            atoms_[n].r += s * (atoms_[n].r - atoms_[n].r1) + atoms_[n].f * dt2;
-                            break;
-
-                        default:
-                            BOOST_ASSERT(!"何かがおかしい！");
-                        }
-
-                        atoms_[n].v = 0.5 * (atoms_[n].r - atoms_[n].r1) / Ar_moleculardynamics::DT;
-
-                        atoms_[n].r1 = rtmp;
-                    }
-            });
-            break;
-        }
-
-        // consider the periodic boundary condination
-        // セルの外側に出たら座標をセル内に戻す
-        tbb::parallel_for(
-            tbb::blocked_range<std::int32_t>(0, NumAtom_),
-            [this, s](tbb::blocked_range<std::int32_t> const & range) {
-            for (auto && n = range.begin(); n != range.end(); ++n) {
-                if (atoms_[n].r[0] > periodiclen_) {
-                    atoms_[n].r[0] -= periodiclen_;
-                    atoms_[n].r1[0] -= periodiclen_;
-                }
-                else if (atoms_[n].r[0] < 0.0) {
-                    atoms_[n].r[0] += periodiclen_;
-                    atoms_[n].r1[0] += periodiclen_;
-                }
-                if (atoms_[n].r[1] > periodiclen_) {
-                    atoms_[n].r[1] -= periodiclen_;
-                    atoms_[n].r1[1] -= periodiclen_;
-                }
-                else if (atoms_[n].r[1] < 0.0) {
-                    atoms_[n].r[1] += periodiclen_;
-                    atoms_[n].r1[1] += periodiclen_;
-                }
-                if (atoms_[n].r[2] > periodiclen_) {
-                    atoms_[n].r[2] -= periodiclen_;
-                    atoms_[n].r1[2] -= periodiclen_;
-                }
-                else if (atoms_[n].r[2] < 0.0) {
-                    atoms_[n].r[2] += periodiclen_;
-                    atoms_[n].r1[2] += periodiclen_;
-                }
-            }
-        });
-
-        // 繰り返し回数と時間を増加
-        t_ = static_cast<double>(MD_iter_) * Ar_moleculardynamics::DT;
-        MD_iter_++;
+        //                atoms_[n].r1 = rtmp;
+        //            }
+        //    });
+        //    break;
+        //}
     }
 
     void Ar_moleculardynamics::recalc()
@@ -370,7 +359,7 @@ namespace moleculardynamics {
 
     // #region privateメンバ関数
 
-    double Ar_moleculardynamics::adjust_periodic(Eigen::Vector4d const & dv)
+    Eigen::Vector4d Ar_moleculardynamics::adjust_periodic(Eigen::Vector4d const & dv)
     {
         auto dvtmp = dv;
         auto const lh = periodiclen_ * 0.5;
@@ -398,7 +387,7 @@ namespace moleculardynamics {
             dvtmp[2] -= periodiclen_;
         }
 
-        return dvtmp.squaredNorm();
+        return dvtmp;
     }
 
     double Ar_moleculardynamics::DimensionlessToHartree(double e) const
@@ -471,6 +460,7 @@ namespace moleculardynamics {
 
             // 方向はランダムに与える
             atoms_[n].v = v * rnd;
+            atoms_[n].p = v * rnd;
         }
 
         auto sx = 0.0;
@@ -490,6 +480,7 @@ namespace moleculardynamics {
         // 重心の並進運動を避けるために、速度の和がゼロになるように補正
         for (auto n = 0; n < NumAtom_; n++) {
             atoms_[n].v -= Eigen::Vector4d(sx, sy, sz, 0.0);
+            atoms_[n].p -= Eigen::Vector4d(sx, sy, sz, 0.0);
         }
     }
 
@@ -498,6 +489,42 @@ namespace moleculardynamics {
         lat_ = std::pow(2.0, 2.0 / 3.0) * scale_;
         recalc();
         periodiclen_ = lat_ * static_cast<double>(Nc_);
+    }
+
+    void Ar_moleculardynamics::periodic()
+    {
+        // consider the periodic boundary condination
+        // セルの外側に出たら座標をセル内に戻す
+        tbb::parallel_for(
+            tbb::blocked_range<std::int32_t>(0, NumAtom_),
+            [this](tbb::blocked_range<std::int32_t> const & range) {
+            for (auto && n = range.begin(); n != range.end(); ++n) {
+                if (atoms_[n].r[0] > periodiclen_) {
+                    atoms_[n].r[0] -= periodiclen_;
+                    //atoms_[n].r1[0] -= periodiclen_;
+                }
+                else if (atoms_[n].r[0] < 0.0) {
+                    atoms_[n].r[0] += periodiclen_;
+                    //atoms_[n].r1[0] += periodiclen_;
+                }
+                if (atoms_[n].r[1] > periodiclen_) {
+                    atoms_[n].r[1] -= periodiclen_;
+                    //atoms_[n].r1[1] -= periodiclen_;
+                }
+                else if (atoms_[n].r[1] < 0.0) {
+                    atoms_[n].r[1] += periodiclen_;
+                    //atoms_[n].r1[1] += periodiclen_;
+                }
+                if (atoms_[n].r[2] > periodiclen_) {
+                    atoms_[n].r[2] -= periodiclen_;
+                    //atoms_[n].r1[2] -= periodiclen_;
+                }
+                else if (atoms_[n].r[2] < 0.0) {
+                    atoms_[n].r[2] += periodiclen_;
+                    //atoms_[n].r1[2] += periodiclen_;
+                }
+            }
+        });
     }
 
     // #endregion privateメンバ関数

@@ -62,6 +62,12 @@ namespace moleculardynamics {
         /*!
             原子に働く力を計算する
         */
+        void calculate();
+
+        //! A public member function.
+        /*!
+            原子に働く力を計算する
+        */
         void calculate_force_pair();
         
         //! A public member function (constant).
@@ -165,7 +171,7 @@ namespace moleculardynamics {
             \param e 無次元単位で表されたエネルギー
             \return Hartree単位で表されたエネルギー
         */
-        double adjust_periodic(Eigen::Vector4d const & dv);
+        Eigen::Vector4d adjust_periodic(Eigen::Vector4d const & dv);
 
         //! A private member function.
         /*!
@@ -192,6 +198,8 @@ namespace moleculardynamics {
             格子定数が変更されたときに呼ばれる
         */
         void ModLattice();
+
+        void periodic();
 
         // #endregion privateメンバ関数
 
