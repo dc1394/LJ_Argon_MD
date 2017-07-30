@@ -245,32 +245,32 @@ namespace moleculardynamics {
 
         // #region メンバ変数
 
-    private:
-        //! A  member variable (constant).
+    public:
+        //! A public member variable (constant).
         /*!
             初期のスーパーセルの個数
         */
         static auto const FIRSTNC = 4;
 
-        //! A private member variable (constant).
+        //! A public member variable (constant).
         /*!
             初期の格子定数のスケール
         */
         static double const FIRSTSCALE;
 
-        //! A private member variable (constant).
+        //! A public member variable (constant).
         /*!
             初期温度（絶対温度）
         */
         static double const FIRSTTEMP;
         
-        //! A private member variable (constant).
+        //! A public member variable (constant).
         /*!
             アルゴン原子に対するσ
         */
         static double const SIGMA;
 
-        //! A private member variable (constant).
+        //! A public member variable (constant).
         /*!
             アルゴン原子のVan der Waals半径
         */
