@@ -25,6 +25,10 @@ namespace moleculardynamics {
         NVT = 1
     };
 
+    //! A struct.
+    /*!
+        原子の情報が格納された構造体
+    */
     #pragma pack(16)
     struct Atom {
         Eigen::Vector4d f;
