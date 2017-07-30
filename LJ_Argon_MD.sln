@@ -1,6 +1,13 @@
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.40629.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LJ_Argon_MD", "LJ_Argon_MD.vcxproj", "{D3D10118-96D0-4629-88B8-122C0256058C}"
+	ProjectSection(ProjectDependencies) = postProject
+		{11600813-A28B-4D36-AA83-5910A83607AE} = {11600813-A28B-4D36-AA83-5910A83607AE}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "moleculardynamics", "moleculardynamics\moleculardynamics.vcxproj", "{11600813-A28B-4D36-AA83-5910A83607AE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -24,6 +31,15 @@ Global
 		{D3D10118-96D0-4629-88B8-122C0256058C}.Release|Win32.Build.0 = Release|Win32
 		{D3D10118-96D0-4629-88B8-122C0256058C}.Release|x64.ActiveCfg = Release|x64
 		{D3D10118-96D0-4629-88B8-122C0256058C}.Release|x64.Build.0 = Release|x64
+		{11600813-A28B-4D36-AA83-5910A83607AE}.Debug|Win32.ActiveCfg = Debug|Win32
+		{11600813-A28B-4D36-AA83-5910A83607AE}.Debug|Win32.Build.0 = Debug|Win32
+		{11600813-A28B-4D36-AA83-5910A83607AE}.Debug|x64.ActiveCfg = Debug|Win32
+		{11600813-A28B-4D36-AA83-5910A83607AE}.Profile|Win32.ActiveCfg = Release|Win32
+		{11600813-A28B-4D36-AA83-5910A83607AE}.Profile|Win32.Build.0 = Release|Win32
+		{11600813-A28B-4D36-AA83-5910A83607AE}.Profile|x64.ActiveCfg = Release|Win32
+		{11600813-A28B-4D36-AA83-5910A83607AE}.Release|Win32.ActiveCfg = Release|Win32
+		{11600813-A28B-4D36-AA83-5910A83607AE}.Release|Win32.Build.0 = Release|Win32
+		{11600813-A28B-4D36-AA83-5910A83607AE}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

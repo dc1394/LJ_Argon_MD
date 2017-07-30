@@ -315,9 +315,7 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
             modNc = false;
         }
 
-        armd.make_pair();
-        armd.Calc_Forces();
-        armd.Move_Atoms();
+        armd.runCalc();
 
         // Clear render target and the depth stencil 
         pd3dDevice->ClearRenderTargetView(DXUTGetD3D10RenderTargetView(), clearColor);

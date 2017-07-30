@@ -5,9 +5,8 @@
     This software is released under the BSD 2-Clause License.
 */
 
-#include "DXUT.h"
 #include "Ar_moleculardynamics.h"
-#include "../myrandom/myrand.h"
+#include "myrandom/myrand.h"
 #include <cmath>                    // for std::sqrt, std::pow
 #include <boost/assert.hpp>         // for BOOST_ASSERT
 #include <tbb/combinable.h>         // for tbb::combinable
@@ -75,7 +74,18 @@ namespace moleculardynamics {
 
     // #region publicメンバ関数
 
-    void Ar_moleculardynamics::calculate_force_pair()
+    void Ar_moleculardynamics::runCalc()
+    {
+        calcForces();
+        moveAtoms();
+        periodic();
+
+        // 繰り返し回数と時間を増加
+        t_ = static_cast<double>(MD_iter_)* Ar_moleculardynamics::DT;
+        MD_iter_++;
+    }
+
+    void Ar_moleculardynamics::calcForces()
     {
         // 各原子に働く力の初期化
         for (auto n = 0; n < NumAtom_; n++) {
@@ -87,74 +97,52 @@ namespace moleculardynamics {
 
         tbb::combinable<double> Up;
         tbb::combinable<double> virial;
+        
+        tbb::parallel_for(
+            tbb::blocked_range<std::int32_t>(0, NumAtom_),
+            [this, &Up, &virial](tbb::blocked_range<std::int32_t> const & range) {
+            for (auto && n = range.begin(); n != range.end(); ++n) {
+                for (auto m = 0; m < NumAtom_; m++) {
 
-        auto const pp = atom_pairs_.size();
-        for (auto k = 0; k < pp; k++) {
-            const int i = atom_pairs_[k].first;
-            const int j = atom_pairs_[k].second;
-            auto const dv = atoms_[j].r - atoms_[i].r;
-            auto const r2 = adjust_periodic(dv);
+                    // ±ncp_分のセル内の原子との相互作用を計算
+                    for (auto i = -ncp_; i <= ncp_; i++) {
+                        for (auto j = -ncp_; j <= ncp_; j++) {
+                            for (auto k = -ncp_; k <= ncp_; k++) {
+                                auto const sx = static_cast<double>(i) * periodiclen_;
+                                auto const sy = static_cast<double>(j) * periodiclen_;
+                                auto const sz = static_cast<double>(k) * periodiclen_;
 
-            if (r2 > rc2_) {
-                continue;
+                                // 自分自身との相互作用を排除
+                                if (n != m || i != 0 || j != 0 || k != 0) {
+                                    auto const dx = atoms_[n].r[0] - (atoms_[m].r[0] + sx);
+                                    auto const dy = atoms_[n].r[1] - (atoms_[m].r[1] + sy);
+                                    auto const dz = atoms_[n].r[2] - (atoms_[m].r[2] + sz);
+
+                                    Eigen::Vector3d r2vec(dx, dy, dz);
+                                    auto const r2 = r2vec.squaredNorm();
+                                    // 打ち切り距離内であれば計算
+                                    if (r2 <= rc2_) {
+                                        auto const r = std::sqrt(r2);
+                                        auto const rm6 = 1.0 / (r2 * r2 * r2);
+                                        auto const rm7 = rm6 / r;
+                                        auto const rm12 = rm6 * rm6;
+                                        auto const rm13 = rm12 / r;
+
+                                        auto const Fr = 48.0 * rm13 - 24.0 * rm7;
+
+                                        atoms_[n].f += Eigen::Vector4d(dx / r * Fr, dy / r * Fr, dz / r * Fr, 0.0);
+
+                                        // エネルギーの計算、ただし二重計算のために0.5をかけておく
+                                        Up.local() += 0.5 * (4.0 * (rm12 - rm6) - Vrc_);
+                                        virial.local() += 0.5 * r * Fr;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
-
-            auto const r = std::sqrt(r2);
-            auto const rm6 = 1.0 / (r2 * r2 * r2);
-            auto const rm7 = rm6 / r;
-            auto const rm12 = rm6 * rm6;
-            auto const rm13 = rm12 / r;
-
-            auto const Fr = 48.0 * rm13 - 24.0 * rm7;
-
-            atoms_[k].f += Eigen::Vector4d(dv[0] / r * Fr, dv[1] / r * Fr, dv[2] / r * Fr, 0.0);
-        }
-
-        //tbb::parallel_for(
-        //    tbb::blocked_range<std::int32_t>(0, NumAtom_),
-        //    [this, &Up, &virial](tbb::blocked_range<std::int32_t> const & range) {
-        //    for (auto && n = range.begin(); n != range.end(); ++n) {
-        //        for (auto m = 0; m < NumAtom_; m++) {
-
-        //            // ±ncp_分のセル内の原子との相互作用を計算
-        //            for (auto i = -ncp_; i <= ncp_; i++) {
-        //                for (auto j = -ncp_; j <= ncp_; j++) {
-        //                    for (auto k = -ncp_; k <= ncp_; k++) {
-        //                        auto const sx = static_cast<double>(i) * periodiclen_;
-        //                        auto const sy = static_cast<double>(j) * periodiclen_;
-        //                        auto const sz = static_cast<double>(k) * periodiclen_;
-
-        //                        // 自分自身との相互作用を排除
-        //                        if (n != m || i != 0 || j != 0 || k != 0) {
-        //                            auto const dx = atoms_[n].r[0] - (atoms_[m].r[0] + sx);
-        //                            auto const dy = atoms_[n].r[1] - (atoms_[m].r[1] + sy);
-        //                            auto const dz = atoms_[n].r[2] - (atoms_[m].r[2] + sz);
-
-        //                            Eigen::Vector3d r2vec(dx, dy, dz);
-        //                            auto const r2 = r2vec.squaredNorm();
-        //                            // 打ち切り距離内であれば計算
-        //                            if (r2 <= rc2_) {
-        //                                auto const r = std::sqrt(r2);
-        //                                auto const rm6 = 1.0 / (r2 * r2 * r2);
-        //                                auto const rm7 = rm6 / r;
-        //                                auto const rm12 = rm6 * rm6;
-        //                                auto const rm13 = rm12 / r;
-
-        //                                auto const Fr = 48.0 * rm13 - 24.0 * rm7;
-
-        //                                atoms_[n].f += Eigen::Vector4d(dx / r * Fr, dy / r * Fr, dz / r * Fr, 0.0);
-
-        //                                // エネルギーの計算、ただし二重計算のために0.5をかけておく
-        //                                Up.local() += 0.5 * (4.0 * (rm12 - rm6) - Vrc_);
-        //                                virial.local() += 0.5 * r * Fr;
-        //                            }
-        //                        }
-        //                    }
-        //                }
-        //            }
-        //        }
-        //    }
-        //});
+        });
 
         Up_ = Up.combine(std::plus<double>());
         virial_ = virial.combine(std::plus<double>());
@@ -198,22 +186,7 @@ namespace moleculardynamics {
         return Ar_moleculardynamics::YPSILON / Ar_moleculardynamics::KB * Tg_;
     }
     
-    void Ar_moleculardynamics::make_pair()
-    {
-        for (auto i = 0; i < NumAtom_ - 1; i++) {
-            for (auto j = i + 1; j < NumAtom_; j++) {
-                auto const dv = atoms_[j].r - atoms_[i].r;
-                auto const r2 = adjust_periodic(dv);
-
-                if (r2 > rc2_) {
-                    continue;
-                }
-                atom_pairs_.push_back(std::make_pair(i, j));
-            }
-        }
-    }
-
-    void Ar_moleculardynamics::Move_Atoms()
+    void Ar_moleculardynamics::moveAtoms()
     {
         // 運動エネルギーの初期化
         Uk_ = 0.0;
@@ -256,7 +229,6 @@ namespace moleculardynamics {
             break;
 
         default:
-
             // update the coordinates by the Verlet method
             tbb::parallel_for(
                 tbb::blocked_range<std::int32_t>(0, NumAtom_),
@@ -280,18 +252,20 @@ namespace moleculardynamics {
                         }
 
                         atoms_[n].v = 0.5 * (atoms_[n].r - atoms_[n].r1) / Ar_moleculardynamics::DT;
-
                         atoms_[n].r1 = rtmp;
                     }
             });
             break;
         }
-
+    }
+    
+    void Ar_moleculardynamics::periodic()
+    {
         // consider the periodic boundary condination
         // セルの外側に出たら座標をセル内に戻す
         tbb::parallel_for(
             tbb::blocked_range<std::int32_t>(0, NumAtom_),
-            [this, s](tbb::blocked_range<std::int32_t> const & range) {
+            [this](tbb::blocked_range<std::int32_t> const & range) {
             for (auto && n = range.begin(); n != range.end(); ++n) {
                 if (atoms_[n].r[0] > periodiclen_) {
                     atoms_[n].r[0] -= periodiclen_;
@@ -319,10 +293,6 @@ namespace moleculardynamics {
                 }
             }
         });
-
-        // 繰り返し回数と時間を増加
-        t_ = static_cast<double>(MD_iter_) * Ar_moleculardynamics::DT;
-        MD_iter_++;
     }
 
     void Ar_moleculardynamics::recalc()
@@ -333,14 +303,7 @@ namespace moleculardynamics {
         MD_initPos();
         MD_initVel();
     }
-
-    void Ar_moleculardynamics::update_position()
-    {
-        for (auto && a : atoms_) {
-            a.r += a.p * dt2;
-        }
-    }
-
+    
     void Ar_moleculardynamics::setEnsemble(EnsembleType ensemble)
     {
         ensemble_ = ensemble;
@@ -369,37 +332,6 @@ namespace moleculardynamics {
     // #endregion publicメンバ関数
 
     // #region privateメンバ関数
-
-    double Ar_moleculardynamics::adjust_periodic(Eigen::Vector4d const & dv)
-    {
-        auto dvtmp = dv;
-        auto const lh = periodiclen_ * 0.5;
-        if (dv[0] < -lh) {
-            dvtmp[0] += periodiclen_;
-        }
-        
-        if (dv[0] > lh) {
-            dvtmp[0] -= periodiclen_;
-        }
-        
-        if (dv[1] < -lh) {
-            dvtmp[1] += periodiclen_;
-        }
-
-        if (dv[1] > lh) {
-            dvtmp[1] -= periodiclen_;
-        }
-
-        if (dv[2] < -lh) {
-            dvtmp[2] += periodiclen_;
-        }
-
-        if (dv[2] > lh) {
-            dvtmp[2] -= periodiclen_;
-        }
-
-        return dvtmp.squaredNorm();
-    }
 
     double Ar_moleculardynamics::DimensionlessToHartree(double e) const
     {

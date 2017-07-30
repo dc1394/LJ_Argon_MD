@@ -31,7 +31,6 @@ namespace moleculardynamics {
         Eigen::Vector4d r;
         Eigen::Vector4d r1;
         Eigen::Vector4d v;
-        Eigen::Vector4d p;
     };
 
     //! A class.
@@ -58,12 +57,6 @@ namespace moleculardynamics {
 
         // #region publicメンバ関数
 
-        //! A public member function.
-        /*!
-            原子に働く力を計算する
-        */
-        void calculate_force_pair();
-        
         //! A public member function (constant).
         /*!
             シミュレーションを開始してからの経過時間を求める
@@ -105,26 +98,18 @@ namespace moleculardynamics {
             与えた温度の絶対温度を求める
         */
         double getTgiven() const;
-
-        //! A public member function.
-        /*!
-            原子のペアを作る
-        */
-        void make_pair();
-
-        //! A public member function.
-        /*!
-            原子を移動させる
-        */
-        void Move_Atoms();
-        
+                
         //! A oublic member function.
         /*!
             再計算する
         */
         void recalc();
 
-        void update_position();
+        //! A oublic member function.
+        /*!
+            MDを1ステップ計算する
+        */
+        void runCalc();
 
         //! A public member function.
         /*!
@@ -161,11 +146,9 @@ namespace moleculardynamics {
     private:
         //! A private member function.
         /*!
-            エネルギーの単位を無次元単位からHartreeに変換する
-            \param e 無次元単位で表されたエネルギー
-            \return Hartree単位で表されたエネルギー
+            原子に働く力を計算する
         */
-        double adjust_periodic(Eigen::Vector4d const & dv);
+        void calcForces();
 
         //! A private member function.
         /*!
@@ -193,6 +176,18 @@ namespace moleculardynamics {
         */
         void ModLattice();
 
+        //! A privte member function.
+        /*!
+            原子を移動させる
+        */
+        void moveAtoms();
+
+        //! A private member function.
+        /*!
+            周期境界条件を用いて、原子の位置を補正する
+        */
+        void periodic();
+        
         // #endregion privateメンバ関数
 
         // #region プロパティ
@@ -250,8 +245,8 @@ namespace moleculardynamics {
 
         // #region メンバ変数
 
-    public:
-        //! A private member variable (constant).
+    private:
+        //! A  member variable (constant).
         /*!
             初期のスーパーセルの個数
         */
@@ -341,12 +336,6 @@ namespace moleculardynamics {
             原子の可変長配列
         */
         std::vector<Atom, boost::alignment::aligned_allocator<Atom> > atoms_;
-
-        //! A private member variable.
-        /*!
-            原子の可変長配列
-        */
-        std::vector< std::pair<std::int32_t, std::int32_t> > atom_pairs_;
 
         //! A private member variable (constant).
         /*!
