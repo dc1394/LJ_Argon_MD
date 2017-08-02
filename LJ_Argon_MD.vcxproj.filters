@@ -8,11 +8,11 @@
     <Filter Include="DXUT">
       <UniqueIdentifier>{a43c5c25-0e86-4a20-b64a-883785ff74fd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="utility">
+      <UniqueIdentifier>{1ec3c0c7-cd94-423d-9f39-48d59fa8acf7}</UniqueIdentifier>
+    </Filter>
     <Filter Include="document">
       <UniqueIdentifier>{7fe29cb1-ae61-4327-9f5c-9132b680ae05}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="utility">
-      <UniqueIdentifier>{3d01cb0a-e810-43bb-a2d8-d9b11f14af73}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

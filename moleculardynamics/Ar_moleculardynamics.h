@@ -32,7 +32,6 @@ namespace moleculardynamics {
     #pragma pack(16)
     struct Atom {
         Eigen::Vector4d f;
-        Eigen::Vector4d r;
         Eigen::Vector4d r1;
         Eigen::Vector4d v;
     };
@@ -199,12 +198,6 @@ namespace moleculardynamics {
     public:
         //! A property.
         /*!
-            原子へのプロパティ
-        */
-        Property<std::vector<Atom, boost::alignment::aligned_allocator<Atom> > const &> const atoms;
-
-        //! A property.
-        /*!
             MDのステップ数へのプロパティ
         */
         Property<std::int32_t> const MD_iter;
@@ -238,6 +231,24 @@ namespace moleculardynamics {
             ポテンシャルエネルギーへのプロパティ
         */
         Property<double> const Up;
+
+        //! A property.
+        /*!
+        n番目の原子のx座標へのプロパティ
+        */
+        Property<std::vector<double> const &> const X;
+
+        //! A property.
+        /*!
+        n番目の原子のy座標へのプロパティ
+        */
+        Property<std::vector<double> const &> const Y;
+
+        //! A property.
+        /*!
+        n番目の原子のz座標へのプロパティ
+        */
+        Property<std::vector<double> const &> const Z;
 
         //! A property.
         /*!
@@ -358,7 +369,7 @@ namespace moleculardynamics {
             格子定数
         */
         double lat_;
-
+                
         //! A private member variable.
         /*!
             MDのステップ数
@@ -461,6 +472,24 @@ namespace moleculardynamics {
         */
         double const Vrc_;
 
+        //! A private member variable.
+        /*!
+        n個目の原子のx座標
+        */
+        std::vector<double> X_;
+
+        //! A private member variable.
+        /*!
+        n個目の原子のy座標
+        */
+        std::vector<double> Y_;
+
+        //! A private member variable.
+        /*!
+        n個目の原子のz座標
+        */
+        std::vector<double> Z_;
+        
         // #endregion メンバ変数
 
         // #region 禁止されたコンストラクタ・メンバ関数

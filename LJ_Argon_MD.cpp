@@ -361,9 +361,9 @@ void CALLBACK OnD3D10FrameRender( ID3D10Device* pd3dDevice, double fTime, float 
             D3DXMATRIX World;
             D3DXMatrixTranslation(
                 &World,
-                boost::numeric_cast<float>(armd.atoms()[i].r[0]) - pos,
-                boost::numeric_cast<float>(armd.atoms()[i].r[1]) - pos,
-                boost::numeric_cast<float>(armd.atoms()[i].r[2]) - pos);
+                boost::numeric_cast<float>(armd.X()[i]) - pos,
+                boost::numeric_cast<float>(armd.Y()[i]) - pos,
+                boost::numeric_cast<float>(armd.Z()[i]) - pos);
             
             D3DXMatrixMultiply(&World, &(*g_Camera.GetWorldMatrix()), &World);
 
@@ -669,7 +669,7 @@ void CreateSphereMesh(ID3D10Device* pd3dDevice)
 {
     using namespace moleculardynamics;
 
-    auto const size = armd.atoms().size();
+    auto const size = armd.NumAtom();
 
     pmeshvec.resize(size);
     for (auto & pmesh : pmeshvec) {
