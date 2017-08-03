@@ -32,6 +32,7 @@ namespace moleculardynamics {
     #pragma pack(16)
     struct Atom {
         Eigen::Vector4d f;
+        Eigen::Vector4d r;
         Eigen::Vector4d r1;
         Eigen::Vector4d v;
     };

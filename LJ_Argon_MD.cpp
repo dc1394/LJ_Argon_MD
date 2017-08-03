@@ -809,7 +809,7 @@ void SetUI()
         125,
         22,
         30,
-        500,
+        600,
         boost::numeric_cast<int>(moleculardynamics::Ar_moleculardynamics::FIRSTSCALE * LATTICERATIO));
 
     // スーパーセルの個数の変更
