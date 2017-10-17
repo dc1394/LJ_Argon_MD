@@ -141,7 +141,7 @@ namespace moleculardynamics {
 
                                         // エネルギーの計算、ただし二重計算のために0.5をかけておく
                                         Up.local() += 0.5 * (4.0 * (rm12 - rm6) - Vrc_);
-                                        virial.local() += 0.5 * r * Fr;
+                                        virial.local() -= 0.5 * r * Fr;
                                     }
                                 }
                             }
@@ -265,8 +265,6 @@ namespace moleculardynamics {
             });
             break;
         }
-
-        auto a = 0;
     }
     
     void Ar_moleculardynamics::periodic()
