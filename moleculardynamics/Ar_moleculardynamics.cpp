@@ -79,82 +79,6 @@ namespace moleculardynamics {
 
     // #region publicメンバ関数
 
-    void Ar_moleculardynamics::runCalc()
-    {
-        calcForces();
-        moveAtoms();
-        periodic();
-
-        for (auto n = 0; n < NumAtom_; n++) {
-            X_[n] = atoms_[n].r[0];
-            Y_[n] = atoms_[n].r[1];
-            Z_[n] = atoms_[n].r[2];
-        }
-
-        // 繰り返し回数と時間を増加
-        t_ = static_cast<double>(MD_iter_)* Ar_moleculardynamics::DT;
-        MD_iter_++;
-    }
-
-    void Ar_moleculardynamics::calcForces()
-    {
-        // 各原子に働く力の初期化
-        for (auto && a : atoms_) {
-            a.f = Eigen::Vector4d::Zero();
-        }
-        
-        tbb::combinable<double> Up;
-        tbb::combinable<double> virial;
-        
-        tbb::parallel_for(
-            tbb::blocked_range<std::int32_t>(0, NumAtom_),
-            [this, &Up, &virial](tbb::blocked_range<std::int32_t> const & range) {
-            for (auto && n = range.begin(); n != range.end(); ++n) {
-                for (auto m = 0; m < NumAtom_; m++) {
-
-                    // ±ncp_分のセル内の原子との相互作用を計算
-                    for (auto i = -ncp_; i <= ncp_; i++) {
-                        for (auto j = -ncp_; j <= ncp_; j++) {
-                            for (auto k = -ncp_; k <= ncp_; k++) {
-                                auto const sx = static_cast<double>(i) * periodiclen_;
-                                auto const sy = static_cast<double>(j) * periodiclen_;
-                                auto const sz = static_cast<double>(k) * periodiclen_;
-
-                                // 自分自身との相互作用を排除
-                                if (n != m || i != 0 || j != 0 || k != 0) {
-                                    auto const dx = X_[n] - (X_[m] + sx);
-                                    auto const dy = Y_[n] - (Y_[m] + sy);
-                                    auto const dz = Z_[n] - (Z_[m] + sz);
-
-                                    auto const r2 = Eigen::Vector3d(dx, dy, dz).squaredNorm();
-                                    // 打ち切り距離内であれば計算
-                                    if (r2 <= rc2_) {
-                                        auto const r = std::sqrt(r2);
-                                        auto const rm6 = 1.0 / (r2 * r2 * r2);
-                                        auto const rm7 = rm6 / r;
-                                        auto const rm12 = rm6 * rm6;
-                                        auto const rm13 = rm12 / r;
-
-                                        auto const Fr = 48.0 * rm13 - 24.0 * rm7;
-                                        
-                                        atoms_[n].f += Eigen::Vector4d(dx / r * Fr, dy / r * Fr, dz / r * Fr, 0.0);
-
-                                        // エネルギーの計算、ただし二重計算のために0.5をかけておく
-                                        Up.local() += 0.5 * (4.0 * (rm12 - rm6) - Vrc_);
-                                        virial.local() -= 0.5 * r * Fr;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        Up_ = Up.combine(std::plus<double>());
-        virial_ = virial.combine(std::plus<double>());
-    }
-    
     double Ar_moleculardynamics::getDeltat() const
     {
         return Ar_moleculardynamics::TAU * t_ * 1.0E+12;
@@ -193,6 +117,215 @@ namespace moleculardynamics {
         return Ar_moleculardynamics::YPSILON / Ar_moleculardynamics::KB * Tg_;
     }
     
+    void Ar_moleculardynamics::recalc()
+    {
+        t_ = 0.0;
+        MD_iter_ = 1;
+
+        MD_initPos();
+
+        for (auto n = 0; n < NumAtom_; n++) {
+            X_[n] = atoms_[n].r[0];
+            Y_[n] = atoms_[n].r[1];
+            Z_[n] = atoms_[n].r[2];
+        }
+
+        MD_initVel();
+    }
+    
+    void Ar_moleculardynamics::runCalc()
+    {
+        calcForces();
+        moveAtoms();
+        periodic();
+
+        for (auto n = 0; n < NumAtom_; n++) {
+            X_[n] = atoms_[n].r[0];
+            Y_[n] = atoms_[n].r[1];
+            Z_[n] = atoms_[n].r[2];
+        }
+
+        // 繰り返し回数と時間を増加
+        t_ = static_cast<double>(MD_iter_) * Ar_moleculardynamics::DT;
+        MD_iter_++;
+    }
+
+    void Ar_moleculardynamics::setEnsemble(EnsembleType ensemble)
+    {
+        ensemble_ = ensemble;
+        recalc();
+    }
+
+    void Ar_moleculardynamics::setNc(std::int32_t Nc)
+    {
+        Nc_ = Nc;
+        atoms_.resize(Nc_ * Nc_ * Nc_ * 4);
+        X_.resize(Nc_ * Nc_ * Nc_ * 4);
+        Y_.resize(Nc_ * Nc_ * Nc_ * 4);
+        Z_.resize(Nc_ * Nc_ * Nc_ * 4);
+
+        ModLattice();
+    }
+
+    void Ar_moleculardynamics::setScale(double scale)
+    {
+        scale_ = scale;
+        ModLattice();
+    }
+
+    void Ar_moleculardynamics::setTgiven(double Tgiven)
+    {
+        Tg_ = Tgiven * Ar_moleculardynamics::KB / Ar_moleculardynamics::YPSILON;
+    }
+
+    // #endregion publicメンバ関数
+
+    // #region privateメンバ関数
+
+    void Ar_moleculardynamics::calcForces()
+    {
+        // 各原子に働く力の初期化
+        for (auto && a : atoms_) {
+            a.f = Eigen::Vector4d::Zero();
+        }
+
+        tbb::combinable<double> Up;
+        tbb::combinable<double> virial;
+
+        tbb::parallel_for(
+            tbb::blocked_range<std::int32_t>(0, NumAtom_),
+            [this, &Up, &virial](tbb::blocked_range<std::int32_t> const & range) {
+            for (auto && n = range.begin(); n != range.end(); ++n) {
+                for (auto m = 0; m < NumAtom_; m++) {
+
+                    // ±ncp_分のセル内の原子との相互作用を計算
+                    for (auto i = -ncp_; i <= ncp_; i++) {
+                        for (auto j = -ncp_; j <= ncp_; j++) {
+                            for (auto k = -ncp_; k <= ncp_; k++) {
+                                auto const sx = static_cast<double>(i)* periodiclen_;
+                                auto const sy = static_cast<double>(j)* periodiclen_;
+                                auto const sz = static_cast<double>(k)* periodiclen_;
+
+                                // 自分自身との相互作用を排除
+                                if (n != m || i != 0 || j != 0 || k != 0) {
+                                    auto const dx = X_[n] - (X_[m] + sx);
+                                    auto const dy = Y_[n] - (Y_[m] + sy);
+                                    auto const dz = Z_[n] - (Z_[m] + sz);
+
+                                    auto const r2 = Eigen::Vector3d(dx, dy, dz).squaredNorm();
+                                    // 打ち切り距離内であれば計算
+                                    if (r2 <= rc2_) {
+                                        auto const r = std::sqrt(r2);
+                                        auto const rm6 = 1.0 / (r2 * r2 * r2);
+                                        auto const rm7 = rm6 / r;
+                                        auto const rm12 = rm6 * rm6;
+                                        auto const rm13 = rm12 / r;
+
+                                        auto const Fr = 48.0 * rm13 - 24.0 * rm7;
+
+                                        atoms_[n].f += Eigen::Vector4d(dx / r * Fr, dy / r * Fr, dz / r * Fr, 0.0);
+
+                                        // エネルギーの計算、ただし二重計算のために0.5をかけておく
+                                        Up.local() += 0.5 * (4.0 * (rm12 - rm6) - Vrc_);
+                                        virial.local() -= 0.5 * r * Fr;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        Up_ = Up.combine(std::plus<double>());
+        virial_ = virial.combine(std::plus<double>());
+    }
+
+    double Ar_moleculardynamics::DimensionlessToHartree(double e) const
+    {
+        return e * Ar_moleculardynamics::YPSILON / Ar_moleculardynamics::HARTREE;
+    }
+
+    void Ar_moleculardynamics::MD_initPos()
+    {
+        double sx, sy, sz;
+        auto n = 0;
+
+        for (auto i = 0; i < Nc_; i++) {
+            for (auto j = 0; j < Nc_; j++) {
+                for (auto k = 0; k < Nc_; k++) {
+                    // 基本セルをコピーする
+                    sx = static_cast<double>(i) * lat_;
+                    sy = static_cast<double>(j) * lat_;
+                    sz = static_cast<double>(k) * lat_;
+
+                    // 基本セル内には4つの原子がある
+                    atoms_[n].r = Eigen::Vector4d(sx, sy, sz, 0.0);
+                    n++;
+
+                    atoms_[n].r = Eigen::Vector4d(0.5 * lat_ + sx, 0.5 * lat_ + sy, sz, 0.0);
+                    n++;
+
+                    atoms_[n].r = Eigen::Vector4d(sx, 0.5 * lat_ + sy, 0.5 * lat_ + sz, 0.0);
+                    n++;
+
+                    atoms_[n].r = Eigen::Vector4d(0.5 * lat_ + sx, sy, 0.5 * lat_ + sz, 0.0);
+                    n++;
+                }
+            }
+        }
+
+        NumAtom_ = n;
+
+        // move the center of mass to the origin
+        // 系の重心を座標系の原点とする
+        Eigen::Vector4d s(0.0, 0.0, 0.0, 0.0);
+
+        for (auto && atom : atoms_) {
+            s += atom.r;
+        }
+
+        s /= static_cast<double>(NumAtom_);
+
+        for (auto n = 0; n < NumAtom_; n++) {
+            atoms_[n].r -= s;
+        }
+    }
+
+    void Ar_moleculardynamics::MD_initVel()
+    {
+        auto const v = std::sqrt(3.0 * Tg_);
+
+        myrandom::MyRand mr(-1.0, 1.0);
+
+        for (auto && a : atoms_) {
+            Eigen::Vector4d rnd(mr.myrand(), mr.myrand(), mr.myrand(), 0.0);
+
+            // 方向はランダムに与える
+            a.v = v * rnd / rnd.norm();
+        }
+
+        Eigen::Vector4d s(0.0, 0.0, 0.0, 0.0);
+
+        for (auto && a : atoms_) {
+            s += a.v;
+        }
+
+        s /= static_cast<double>(NumAtom_);
+
+        // 重心の並進運動を避けるために、速度の和がゼロになるように補正
+        for (auto && a : atoms_) {
+            a.v -= s;
+        }
+    }
+
+    void Ar_moleculardynamics::ModLattice()
+    {
+        lat_ = std::pow(2.0, 2.0 / 3.0) * scale_;
+        recalc();
+        periodiclen_ = lat_ * static_cast<double>(Nc_);
+    }
+
     void Ar_moleculardynamics::moveAtoms()
     {
         // 運動エネルギーの初期化
@@ -240,33 +373,33 @@ namespace moleculardynamics {
             tbb::parallel_for(
                 tbb::blocked_range<std::int32_t>(0, NumAtom_),
                 [this, s](tbb::blocked_range<std::int32_t> const & range) {
-                    for (auto && n = range.begin(); n != range.end(); ++n) {
-                        auto const rtmp = atoms_[n].r;
+                for (auto && n = range.begin(); n != range.end(); ++n) {
+                    auto const rtmp = atoms_[n].r;
 
-                        switch (ensemble_) {
-                        case EnsembleType::NVE:
-                            atoms_[n].r = 2.0 * atoms_[n].r - atoms_[n].r1 + atoms_[n].f * dt2;
-                            break;
+                    switch (ensemble_) {
+                    case EnsembleType::NVE:
+                        atoms_[n].r = 2.0 * atoms_[n].r - atoms_[n].r1 + atoms_[n].f * dt2;
+                        break;
 
-                        case EnsembleType::NVT:
-                            // update coordinates and velocity
-                            // Verlet法の座標更新式において速度成分を抜き出し、その部分をスケールする
-                            atoms_[n].r += s * (atoms_[n].r - atoms_[n].r1) + atoms_[n].f * dt2;
-                            break;
+                    case EnsembleType::NVT:
+                        // update coordinates and velocity
+                        // Verlet法の座標更新式において速度成分を抜き出し、その部分をスケールする
+                        atoms_[n].r += s * (atoms_[n].r - atoms_[n].r1) + atoms_[n].f * dt2;
+                        break;
 
-                        default:
-                            BOOST_ASSERT(!"何かがおかしい！");
-                        }
-
-                        atoms_[n].v = 0.5 * (atoms_[n].r - atoms_[n].r1) / Ar_moleculardynamics::DT;
-
-                        atoms_[n].r1 = rtmp;
+                    default:
+                        BOOST_ASSERT(!"何かがおかしい！");
                     }
+
+                    atoms_[n].v = 0.5 * (atoms_[n].r - atoms_[n].r1) / Ar_moleculardynamics::DT;
+
+                    atoms_[n].r1 = rtmp;
+                }
             });
             break;
         }
     }
-    
+
     void Ar_moleculardynamics::periodic()
     {
         // consider the periodic boundary condination
@@ -301,145 +434,6 @@ namespace moleculardynamics {
                 }
             }
         });
-    }
-
-    void Ar_moleculardynamics::recalc()
-    {
-        t_ = 0.0;
-        MD_iter_ = 1;
-
-        MD_initPos();
-
-        for (auto n = 0; n < NumAtom_; n++) {
-            X_[n] = atoms_[n].r[0];
-            Y_[n] = atoms_[n].r[1];
-            Z_[n] = atoms_[n].r[2];
-        }
-
-        MD_initVel();
-    }
-    
-    void Ar_moleculardynamics::setEnsemble(EnsembleType ensemble)
-    {
-        ensemble_ = ensemble;
-        recalc();
-    }
-
-    void Ar_moleculardynamics::setNc(std::int32_t Nc)
-    {
-        Nc_ = Nc;
-        atoms_.resize(Nc_ * Nc_ * Nc_ * 4);
-        X_.resize(Nc_ * Nc_ * Nc_ * 4);
-        Y_.resize(Nc_ * Nc_ * Nc_ * 4);
-        Z_.resize(Nc_ * Nc_ * Nc_ * 4);
-
-        ModLattice();
-    }
-
-    void Ar_moleculardynamics::setScale(double scale)
-    {
-        scale_ = scale;
-        ModLattice();
-    }
-
-    void Ar_moleculardynamics::setTgiven(double Tgiven)
-    {
-        Tg_ = Tgiven * Ar_moleculardynamics::KB / Ar_moleculardynamics::YPSILON;
-    }
-
-    // #endregion publicメンバ関数
-
-    // #region privateメンバ関数
-
-    double Ar_moleculardynamics::DimensionlessToHartree(double e) const
-    {
-        return e * Ar_moleculardynamics::YPSILON / Ar_moleculardynamics::HARTREE;
-    }
-
-    void Ar_moleculardynamics::MD_initPos()
-    {
-        double sx, sy, sz;
-        auto n = 0;
-
-        for (auto i = 0; i < Nc_; i++) {
-            for (auto j = 0; j < Nc_; j++) {
-                for (auto k = 0; k < Nc_; k++) {
-                    // 基本セルをコピーする
-                    sx = static_cast<double>(i) * lat_;
-                    sy = static_cast<double>(j) * lat_;
-                    sz = static_cast<double>(k) * lat_;
-
-                    // 基本セル内には4つの原子がある
-                    atoms_[n].r = Eigen::Vector4d(sx, sy, sz, 0.0);
-                    n++;
-
-                    atoms_[n].r = Eigen::Vector4d(0.5 * lat_ + sx, 0.5 * lat_ + sy, sz, 0.0);
-                    n++;
-
-                    atoms_[n].r = Eigen::Vector4d(sx, 0.5 * lat_ + sy, 0.5 * lat_ + sz, 0.0);
-                    n++;
-
-                    atoms_[n].r = Eigen::Vector4d(0.5 * lat_ + sx, sy, 0.5 * lat_ + sz, 0.0);
-                    n++;
-                }
-            }
-        }
-
-        NumAtom_ = n;
-
-        // move the center of mass to the origin
-        // 系の重心を座標系の原点とする
-        sx = 0.0;
-        sy = 0.0;
-        sz = 0.0;
-
-        for (auto n = 0; n < NumAtom_; n++) {
-            sx += atoms_[n].r[0];
-            sy += atoms_[n].r[1];
-            sz += atoms_[n].r[2];
-        }
-
-        sx /= static_cast<double>(NumAtom_);
-        sy /= static_cast<double>(NumAtom_);
-        sz /= static_cast<double>(NumAtom_);
-
-        for (auto n = 0; n < NumAtom_; n++) {
-            atoms_[n].r -= Eigen::Vector4d(sx, sy, sz, 0.0);
-        }
-    }
-
-    void Ar_moleculardynamics::MD_initVel()
-    {
-        auto const v = std::sqrt(3.0 * Tg_);
-
-        myrandom::MyRand mr(-1.0, 1.0);
-
-        for (auto && a : atoms_) {
-            Eigen::Vector4d rnd(mr.myrand(), mr.myrand(), mr.myrand(), 0.0);
-
-            // 方向はランダムに与える
-            a.v = v * rnd / rnd.norm();
-        }
-
-        Eigen::Vector4d s(0.0, 0.0, 0.0, 0.0);
-
-        for (auto && a : atoms_) {
-            s += a.v;
-        }
-
-        s /= static_cast<double>(NumAtom_);
-
-        // 重心の並進運動を避けるために、速度の和がゼロになるように補正
-        for (auto && a : atoms_) {
-            a.v -= s;
-        }
-    }
-
-    void Ar_moleculardynamics::ModLattice()
-    {
-        lat_ = std::pow(2.0, 2.0 / 3.0) * scale_;
-        recalc();
-        periodiclen_ = lat_ * static_cast<double>(Nc_);
     }
 
     // #endregion privateメンバ関数
